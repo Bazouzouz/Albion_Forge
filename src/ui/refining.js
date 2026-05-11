@@ -29,8 +29,8 @@ const ENCHANT_PREFIXES = ['', 'Uncommon ', 'Rare ', 'Exceptional ', 'Pristine ']
 const HEART_INFO = {
   ORE:   { iconId: 'T1_FACTION_MOUNTAIN_TOKEN_1', name: 'Mountainheart' },
   WOOD:  { iconId: 'T1_FACTION_FOREST_TOKEN_1',   name: 'Treeheart'     },
-  FIBER: { iconId: 'T1_FACTION_STEPPE_TOKEN_1',   name: 'Vineheart'     },
-  HIDE:  { iconId: 'T1_FACTION_SWAMP_TOKEN_1',    name: 'Beastheart'    },
+  FIBER: { iconId: 'T1_FACTION_SWAMP_TOKEN_1',    name: 'Vineheart'     },
+  HIDE:  { iconId: 'T1_FACTION_STEPPE_TOKEN_1',   name: 'Beastheart'    },
 };
 
 // ── State ─────────────────────────────────────────────────────────────────────

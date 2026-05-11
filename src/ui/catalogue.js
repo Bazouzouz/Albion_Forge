@@ -58,8 +58,8 @@ const COST_DEFAULTS = {
 const HEARTS = [
   { resourceType: 'ORE',   name: 'Mountainheart', desc: '⛏ Ore recipes',   iconId: 'T1_FACTION_MOUNTAIN_TOKEN_1' },
   { resourceType: 'WOOD',  name: 'Treeheart',     desc: '🪵 Wood recipes',  iconId: 'T1_FACTION_FOREST_TOKEN_1'   },
-  { resourceType: 'FIBER', name: 'Vineheart',     desc: '🌿 Fiber recipes', iconId: 'T1_FACTION_STEPPE_TOKEN_1'   },
-  { resourceType: 'HIDE',  name: 'Beastheart',    desc: '🐾 Hide recipes',  iconId: 'T1_FACTION_SWAMP_TOKEN_1'    },
+  { resourceType: 'FIBER', name: 'Vineheart',     desc: '🌿 Fiber recipes', iconId: 'T1_FACTION_SWAMP_TOKEN_1'    },
+  { resourceType: 'HIDE',  name: 'Beastheart',    desc: '🐾 Hide recipes',  iconId: 'T1_FACTION_STEPPE_TOKEN_1'   },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────

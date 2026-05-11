@@ -26,7 +26,7 @@ const RAW_NAMES = {
 
 const ENCHANT_PREFIXES = ['', 'Uncommon ', 'Rare ', 'Exceptional ', 'Pristine '];
 const RESOURCE_EMOJIS  = { ORE:'⛏', WOOD:'🪵', FIBER:'🌿', HIDE:'🐾' };
-const HEART_IDS   = { ORE:'T1_FACTION_MOUNTAIN_TOKEN_1', WOOD:'T1_FACTION_FOREST_TOKEN_1', FIBER:'T1_FACTION_STEPPE_TOKEN_1', HIDE:'T1_FACTION_SWAMP_TOKEN_1' };
+const HEART_IDS   = { ORE:'T1_FACTION_MOUNTAIN_TOKEN_1', WOOD:'T1_FACTION_FOREST_TOKEN_1', FIBER:'T1_FACTION_SWAMP_TOKEN_1', HIDE:'T1_FACTION_STEPPE_TOKEN_1' };
 const HEART_NAMES = { ORE:'Mountainheart', WOOD:'Treeheart', FIBER:'Vineheart', HIDE:'Beastheart' };
 
 // ── State ─────────────────────────────────────────────────────────────────────

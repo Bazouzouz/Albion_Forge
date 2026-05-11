@@ -88,8 +88,8 @@ export const RESOURCES = Object.fromEntries(
 export const CITY_HEARTS = {
   ORE:   { id: 'T1_FACTION_MOUNTAIN_TOKEN_1', label: 'Mountain Heart' },
   WOOD:  { id: 'T1_FACTION_FOREST_TOKEN_1',   label: 'Forest Heart'   },
-  FIBER: { id: 'T1_FACTION_STEPPE_TOKEN_1',   label: 'Steppe Heart'   },
-  HIDE:  { id: 'T1_FACTION_SWAMP_TOKEN_1',    label: 'Swamp Heart'    },
+  FIBER: { id: 'T1_FACTION_SWAMP_TOKEN_1',    label: 'Swamp Heart'    },
+  HIDE:  { id: 'T1_FACTION_STEPPE_TOKEN_1',   label: 'Steppe Heart'   },
 };
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
