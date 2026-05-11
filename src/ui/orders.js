@@ -168,8 +168,8 @@ function buildBill() {
   const heartMap  = {};  // rss → { name, itemId, qty, unitPrice }
   let totalInvest = 0, totalRevenue = 0, totalProfit = 0;
 
-  function addBuy(key, itemId, name, qty, unitPrice, type) {
-    if (!buyMap[key]) buyMap[key] = { itemId, name, qty: 0, unitPrice, type };
+  function addBuy(key, itemId, name, qty, unitPrice, type, tierKey = '') {
+    if (!buyMap[key]) buyMap[key] = { itemId, name, qty: 0, unitPrice, type, tierKey };
     buyMap[key].qty += qty;
   }
 
@@ -178,7 +178,7 @@ function buildBill() {
 
     const hdvItemId = RESOURCES[rss].tiers[`T${hdvBuy.tier}`].raw[hdvBuy.enchant];
     const hdvPrice  = getEffectiveRawPrice(rss, hdvBuy.tierKey) ?? getOrdPrice(hdvItemId) ?? 0;
-    addBuy(`${rss}::${hdvItemId}`, hdvItemId, rawName(rss, hdvBuy.tier, hdvBuy.enchant), rawsNeeded, hdvPrice, 'raw');
+    addBuy(`${rss}::${hdvItemId}`, hdvItemId, rawName(rss, hdvBuy.tier, hdvBuy.enchant), rawsNeeded, hdvPrice, 'raw', tierLabel(hdvBuy.tier, hdvBuy.enchant));
 
     for (const step of steps) {
       const srcItemId = RESOURCES[rss].tiers[`T${step.from.tier}`].raw[step.from.enchant];
@@ -218,12 +218,12 @@ function buildBill() {
 
     if (tier === 4) {
       const t3Id = T3_REFINED_IDS[rss];
-      addBuy(`${rss}::T3::ref`, t3Id, `T3 ${RESOURCES[rss].refinedLabel}`, lowerInputNeeded, getOrdPrice(t3Id) ?? 0, 'refined');
+      addBuy(`${rss}::T3::ref`, t3Id, `T3 ${RESOURCES[rss].refinedLabel}`, lowerInputNeeded, getOrdPrice(t3Id) ?? 0, 'refined', 'T3');
     } else if (result.refinedInput.stacked && result.refinedInput.subResult) {
       walk(result.refinedInput.subResult);
     } else {
       const lowerRefId = RESOURCES[rss].tiers[`T${tier - 1}`].refined[enchant];
-      addBuy(`${rss}::${lowerRefId}::lower`, lowerRefId, refinedName(rss, tier - 1, enchant), lowerInputNeeded, result.inputCost, 'refined');
+      addBuy(`${rss}::${lowerRefId}::lower`, lowerRefId, refinedName(rss, tier - 1, enchant), lowerInputNeeded, result.inputCost, 'refined', tierLabel(tier - 1, enchant));
     }
   }
 
@@ -301,6 +301,7 @@ function renderOrdersList(orderResults) {
       <div class="order-info">
         <div class="order-name-row">
           <span class="order-name">${refinedName(o.rss, o.tier, o.enchant)}</span>
+          <span class="ord-tier-tag">${r.tk}</span>
           ${focusBadge}${stackBadge}
         </div>
         <div class="order-detail">${RESOURCE_EMOJIS[o.rss]} ${r.tk} · recipe ${r.decision.toUpperCase()}</div>
@@ -327,7 +328,7 @@ function renderOrdersList(orderResults) {
 
 function renderBill(bill) {
   const { orderResults, buyMap, transmutes, refineMap, heartMap, totalInvest, totalRevenue, totalProfit } = bill;
-  const iconUrl = id => `https://render.albiononline.com/v1/item/${id}.png?size=32`;
+  const iconUrl = id => `https://render.albiononline.com/v1/item/${id}.png?size=64`;
 
   // Shopping bill
   const buyEl = document.getElementById('ord-bill-buy');
@@ -336,7 +337,7 @@ function renderBill(bill) {
     buyEl.innerHTML = items.length
       ? items.map(b => `<div class="bill-row has-tooltip">
           <img class="bill-icon" src="${iconUrl(b.itemId)}" onerror="this.style.display='none'" />
-          <div class="bill-name">${b.name}<div class="bill-name-sub">${b.type}</div></div>
+          <div class="bill-name">${b.name}${b.tierKey ? ` <span class="bill-tier-tag">${b.tierKey}</span>` : ''}<div class="bill-name-sub">${b.type}</div></div>
           <div style="text-align:right">
             <div class="bill-qty">×${fmt(b.qty)}</div>
             <div class="bill-cost">${fmt(b.qty * b.unitPrice)} silver</div>
@@ -367,7 +368,7 @@ function renderBill(bill) {
               <img class="bill-icon" src="${iconUrl(t.dstItemId)}" onerror="this.style.display='none'" />
             </div>
             <div class="bill-name">
-              ${rawName(t.rss, t.srcTier, t.srcEnchant)} → ${rawName(t.rss, t.dstTier, t.dstEnchant)}
+              ${rawName(t.rss, t.srcTier, t.srcEnchant)} <span class="bill-tier-tag">${t.srcTk}</span> → ${rawName(t.rss, t.dstTier, t.dstEnchant)} <span class="bill-tier-tag">${t.dstTk}</span>
               <div class="bill-name-sub"><span class="chip ${t.via}">${badgeLabel}</span></div>
             </div>
             <div style="text-align:right">
@@ -396,7 +397,7 @@ function renderBill(bill) {
     refEl.innerHTML = items.length
       ? items.map(r => `<div class="bill-row has-tooltip">
           <img class="bill-icon" src="${iconUrl(r.itemId)}" onerror="this.style.display='none'" />
-          <div class="bill-name">${r.name}<div class="bill-name-sub">${r.tierKey} · ${r.decision === 'r2' ? 'with city heart' : 'no heart'} · ${r.focus ? 'focus' : 'no focus'}</div></div>
+          <div class="bill-name">${r.name} <span class="bill-tier-tag">${r.tierKey}</span><div class="bill-name-sub">${r.decision === 'r2' ? 'with city heart' : 'no heart'} · ${r.focus ? 'focus' : 'no focus'}</div></div>
           <div style="text-align:right">
             <div class="bill-qty">×${fmt(r.qty)}</div>
             <div class="bill-cost">recipe ${r.decision.toUpperCase()}</div>

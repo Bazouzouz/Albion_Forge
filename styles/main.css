@@ -1668,7 +1668,7 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
 
 .order-item {
   display: grid;
-  grid-template-columns: 32px 1fr auto auto auto auto auto;
+  grid-template-columns: 46px 1fr auto auto auto auto auto;
   gap: 12px;
   align-items: center;
   padding: 10px 16px;
@@ -1678,9 +1678,9 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
 .order-item:hover { background: var(--bg-secondary); }
 
 .order-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
+  width: 42px;
+  height: 42px;
+  border-radius: 5px;
   object-fit: contain;
   background: var(--bg-secondary);
   border: 0.5px solid var(--border);
@@ -1734,6 +1734,18 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
 .cfg-badge.stack-on  { background: #E8DFF6; color: #5B2D9A; border: 0.5px solid #C4A8E0; }
 .cfg-badge.stack-off { background: var(--bg-secondary); color: var(--text-tertiary); border: 0.5px solid var(--border); }
 
+.ord-tier-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
 /* ── Bill (right column) ──────────────────────────────────────── */
 .bill-section { padding: 14px 16px; border-bottom: 0.5px solid var(--border); }
 .bill-section:last-child { border-bottom: none; }
@@ -1760,9 +1772,9 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
 .bill-row + .bill-row { border-top: 0.5px dashed var(--border); }
 
 .bill-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 3px;
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
   object-fit: contain;
   background: var(--bg-secondary);
   border: 0.5px solid var(--border);
@@ -1771,11 +1783,23 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
 
 .bill-name { flex: 1; min-width: 0; color: var(--text-primary); font-size: 11.5px; }
 .bill-name-sub { font-size: 9.5px; color: var(--text-tertiary); }
+.bill-tier-tag {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
 .bill-qty { font-size: 12px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .bill-cost { font-size: 10px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 .bill-empty { font-size: 11px; color: var(--text-tertiary); padding: 6px 0; font-style: italic; }
 
-.bill-trm-icons { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.bill-trm-icons { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .bill-trm-arrow { color: var(--text-tertiary); font-size: 11px; padding: 0 2px; }
 .bill-name-sub .chip { font-size: 9px; padding: 2px 6px; }
 
