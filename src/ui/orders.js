@@ -109,7 +109,7 @@ function getRefinedInput(rss, tier, enchant, qty, useFocus, useStack, stackFromT
   }
   const rrr = useFocus ? RRR_FOCUS : RRR_NO_FOCUS;
   if (useStack && tier > stackFromTier) {
-    const subQty   = Math.ceil(qty * (1 - rrr));
+    const subQty   = Math.ceil(qty * (1 - rrr)) + 2;
     const subOrder = { id: null, rss, tier: tier - 1, enchant, tierKey: tierLabel(tier - 1, enchant), qty: subQty, useFocus, useStack, stackFromTier };
     const sub      = computeOrderResult(subOrder);
     return { cost: sub.unitCost, stacked: true, subResult: sub };
@@ -140,9 +140,9 @@ function computeOrderResult(order) {
   const decision = (r2Available && r2Cost < r1Cost) ? 'r2' : 'r1';
   const unitCost = decision === 'r2' ? r2Cost : r1Cost;
 
-  const rawsNeeded       = Math.ceil(rec[decision] * qty * (1 - rrr));
-  const lowerInputNeeded = Math.ceil(qty * (1 - rrr));
-  const heartsNeeded     = decision === 'r2' ? Math.ceil(qty * (1 - rrr)) : 0;
+  const rawsNeeded       = Math.ceil(rec[decision] * qty * (1 - rrr)) + 3;
+  const lowerInputNeeded = Math.ceil(qty * (1 - rrr)) + 2;
+  const heartsNeeded     = decision === 'r2' ? Math.ceil(qty * (1 - rrr)) + 2 : 0;
 
   const refItemId = RESOURCES[rss].tiers[`T${tier}`].refined[enchant];
   const barHdv    = getOrdPrice(refItemId);
