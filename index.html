@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Albion Forge — Market &amp; Transmutation</title>
+    <link rel="stylesheet" href="/styles/main.css" />
+  </head>
+  <body>
+
+    <!-- ── Navigation ── -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="nav-logo" href="#">albion<span>forge</span></a>
+        <ul class="nav-tabs" role="tablist">
+          <li>
+            <button class="nav-tab active" data-tab="transmute" role="tab" aria-selected="true">Transmute</button>
+          </li>
+          <li>
+            <button class="nav-tab" data-tab="raffinage" role="tab" aria-selected="false">Refining</button>
+          </li>
+          <li>
+            <button class="nav-tab" data-tab="orders" role="tab" aria-selected="false">Orders</button>
+          </li>
+          <li>
+            <button class="nav-tab" data-tab="catalogue" role="tab" aria-selected="false">Catalogue</button>
+          </li>
+        </ul>
+        <div class="nav-meta">
+          <span class="dot stale" id="status-dot" title="Last updated"></span>
+          <span class="muted" id="status-label">—</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ── Views ── -->
+    <main class="main-content">
+
+      <div id="app-transmute" class="tab-view">
+        <div class="trm-card">
+
+          <div class="trm-toolbar">
+            <span class="trm-toolbar-label">Resource</span>
+            <button class="trm-resource-pill on" data-resource="ORE"   type="button">⛏ Ore</button>
+            <button class="trm-resource-pill"    data-resource="WOOD"  type="button">🪵 Wood</button>
+            <button class="trm-resource-pill"    data-resource="FIBER" type="button">🌿 Fiber</button>
+            <button class="trm-resource-pill"    data-resource="HIDE"  type="button">🐾 Hide</button>
+            <div class="trm-sep"></div>
+            <div class="trm-city-group">
+              <label for="trm-city-select">Buy city</label>
+              <select class="trm-city-select" id="trm-city-select">
+                <option value="Thetford">Thetford</option>
+                <option value="Bridgewatch">Bridgewatch</option>
+                <option value="Fort Sterling">Fort Sterling</option>
+                <option value="Lymhurst">Lymhurst</option>
+                <option value="Martlock">Martlock</option>
+                <option value="Caerleon">Caerleon</option>
+                <option value="Brecilien">Brecilien</option>
+              </select>
+            </div>
+            <button class="trm-refresh-btn" id="trm-refresh-btn" type="button">↻ Refresh</button>
+          </div>
+
+          <div class="trm-legend">
+            <span class="legend-label">Best option:</span>
+            <div class="legend-item"><div class="legend-chip" style="background:#6b6b6b"></div>HDV — buy direct</div>
+            <div class="legend-item"><div class="legend-chip" style="background:#7B2FBE"></div>R1 (T-1) — transmute from lower tier</div>
+            <div class="legend-item"><div class="legend-chip" style="background:#E65C00"></div>R2 (E-1) — transmute from lower enchant</div>
+          </div>
+
+          <table class="trm-table">
+            <thead>
+              <tr>
+                <th style="width:220px">Item</th>
+                <th class="center" style="width:60px">Tier</th>
+                <th>HDV (API)</th>
+                <th class="col-manual">Manual price</th>
+                <th>R1 cost</th>
+                <th>R2 cost</th>
+                <th class="center" style="width:110px">Decision</th>
+                <th>Savings</th>
+              </tr>
+            </thead>
+            <tbody id="transmute-tbody"></tbody>
+          </table>
+
+        </div>
+      </div><!-- /#app-transmute -->
+
+      <div id="app-raffinage" class="tab-view">
+        <div class="rfn-card">
+
+          <div class="rfn-toolbar">
+            <span class="rfn-toolbar-label">Resource</span>
+            <button class="rfn-resource-pill on" data-resource="ORE" type="button">⛏ Ore</button>
+            <button class="rfn-resource-pill" data-resource="WOOD" type="button">🪵 Wood</button>
+            <button class="rfn-resource-pill" data-resource="FIBER" type="button">🌿 Fiber</button>
+            <button class="rfn-resource-pill" data-resource="HIDE" type="button">🐾 Hide</button>
+
+            <div class="rfn-sep"></div>
+
+            <div class="toggle-group">
+              <label for="rfn-city">Refined RSS city</label>
+              <select class="rfn-city-select" id="rfn-city">
+                <option value="Thetford">Thetford</option>
+                <option value="Bridgewatch">Bridgewatch</option>
+                <option value="Fort Sterling">Fort Sterling</option>
+                <option value="Lymhurst">Lymhurst</option>
+                <option value="Martlock">Martlock</option>
+                <option value="Caerleon">Caerleon</option>
+                <option value="Brecilien">Brecilien</option>
+              </select>
+            </div>
+
+            <div class="toggle-group">
+              <label>City Heart (R2)</label>
+              <div class="heart-inline">
+                <img class="heart-inline-icon" id="rfn-heart-icon" src="" alt="" />
+                <span class="heart-inline-name" id="rfn-heart-name"></span>
+                <input class="heart-inline-input" id="rfn-heart-price" type="number" min="0" />
+              </div>
+            </div>
+
+            <div class="rfn-sep"></div>
+
+            <div class="toggle-group">
+              <label>Focus</label>
+              <div class="toggle-row">
+                <span class="toggle-state on" id="rfn-focus-state-off">OFF</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="rfn-focus-toggle" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-state" id="rfn-focus-state-on">ON</span>
+              </div>
+            </div>
+
+            <div class="toggle-group">
+              <label>Stack Profit</label>
+              <div class="toggle-row">
+                <span class="toggle-state" id="rfn-stack-state-off">OFF</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="rfn-stack-toggle" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-state on" id="rfn-stack-state-on">ON</span>
+                <div class="stack-from" id="rfn-stack-from-wrap">
+                  <span>from</span>
+                  <select id="rfn-stack-from">
+                    <option value="4">T4</option>
+                    <option value="5">T5</option>
+                    <option value="6">T6</option>
+                    <option value="7">T7</option>
+                    <option value="8">T8</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="toggle-group">
+              <label for="rfn-qty">Refined RSS qty</label>
+              <input class="rfn-num-input" type="number" id="rfn-qty" min="1" value="100" />
+            </div>
+
+            <div class="toggle-group">
+              <label for="rfn-tax">Tax (%)</label>
+              <input class="rfn-num-input" type="number" id="rfn-tax" min="0" max="100" step="0.1" value="3" />
+            </div>
+
+            <button class="rfn-refresh-btn" id="rfn-refresh-btn" type="button">↻ Refresh</button>
+          </div>
+
+          <div class="trm-legend">
+            <span class="legend-label">Decision :</span>
+            <div class="legend-item"><div class="legend-chip" style="background:#7B2FBE"></div>R1 — recipe without city heart</div>
+            <div class="legend-item"><div class="legend-chip" style="background:#E65C00"></div>R2 — recipe with city heart</div>
+            <div class="legend-item" style="margin-left:auto">
+              <span class="stack-indicator">⬢</span>&nbsp;= refined input is stacked
+            </div>
+          </div>
+
+          <table class="rfn-table">
+            <thead>
+              <tr>
+                <th style="width:200px">Item</th>
+                <th class="center" style="width:50px">Tier</th>
+                <th>Bar HDV (API)</th>
+                <th class="col-manual">Manual</th>
+                <th>R1 cost</th>
+                <th>R2 cost</th>
+                <th class="center" style="width:64px">Decision</th>
+                <th>Unit invest</th>
+                <th>Batch invest</th>
+                <th>Equilibrium</th>
+                <th>Profit/unit</th>
+                <th>SPF</th>
+              </tr>
+            </thead>
+            <tbody id="rfn-tbody"></tbody>
+          </table>
+
+        </div>
+      </div><!-- /#app-raffinage -->
+
+      <div id="app-orders" class="tab-view">
+        <div class="ord-body">
+
+          <!-- LEFT: orders list -->
+          <div class="cat-card">
+            <div class="ord-config-bar">
+              <span class="ord-config-title">Session orders</span>
+              <span class="ord-config-sub" id="ord-count">0 orders</span>
+              <button class="ord-refresh-btn" id="ord-refresh-btn" type="button">↻ Refresh prices</button>
+              <button class="ord-clear-btn" id="ord-clear-btn" type="button">Clear all</button>
+              <button class="ord-add-btn" id="ord-add-btn" type="button">+ Add order</button>
+            </div>
+            <div class="ord-orders-list" id="ord-orders-list">
+              <div class="ord-empty">No orders yet<div class="ord-empty-hint">Click <strong>+ Add order</strong> to add items</div></div>
+            </div>
+          </div>
+
+          <!-- RIGHT: bill -->
+          <div class="cat-card">
+            <div class="bill-section">
+              <div class="bill-title">📋 Shopping bill</div>
+              <div id="ord-bill-buy"><div class="bill-empty">— No items to buy —</div></div>
+            </div>
+            <div class="bill-section">
+              <div class="bill-title">🔄 Transmutations</div>
+              <div id="ord-bill-transmute"><div class="bill-empty">— No transmutes —</div></div>
+            </div>
+            <div class="bill-section">
+              <div class="bill-title">🔥 Refining recipes</div>
+              <div id="ord-bill-refine"><div class="bill-empty">— No recipes —</div></div>
+            </div>
+            <div class="bill-section">
+              <div class="bill-title">💎 City Hearts</div>
+              <div id="ord-bill-hearts"><div class="bill-empty">— No hearts needed —</div></div>
+            </div>
+            <div class="totals" id="ord-totals"></div>
+          </div>
+
+        </div><!-- /.ord-body -->
+
+        <!-- Add / Edit order modal -->
+        <div class="modal-overlay" id="ord-modal-overlay">
+          <div class="modal">
+            <h3 id="ord-modal-title">Add order</h3>
+
+            <div class="modal-row">
+              <label>Resource</label>
+              <div class="resource-pills-modal" id="ord-modal-resource">
+                <div class="pill-mini on" data-rss="ORE">⛏ Ore</div>
+                <div class="pill-mini" data-rss="WOOD">🪵 Wood</div>
+                <div class="pill-mini" data-rss="FIBER">🌿 Fiber</div>
+                <div class="pill-mini" data-rss="HIDE">🐾 Hide</div>
+              </div>
+            </div>
+
+            <div class="modal-row">
+              <label>Tier</label>
+              <select id="ord-modal-tier">
+                <option value="4">Tier 4</option>
+                <option value="5">Tier 5</option>
+                <option value="6" selected>Tier 6</option>
+                <option value="7">Tier 7</option>
+                <option value="8">Tier 8</option>
+              </select>
+            </div>
+
+            <div class="modal-row">
+              <label>Enchant <span style="color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0">(multi-select)</span></label>
+              <div class="tier-grid" id="ord-modal-enchants">
+                <div class="tier-btn" data-e="0">.0</div>
+                <div class="tier-btn" data-e="1">.1</div>
+                <div class="tier-btn" data-e="2">.2</div>
+                <div class="tier-btn" data-e="3">.3</div>
+                <div class="tier-btn" data-e="4">.4</div>
+              </div>
+            </div>
+
+            <div class="modal-row">
+              <label>Quantity (refined produced)</label>
+              <input type="number" id="ord-modal-qty" value="100" min="1" />
+            </div>
+
+            <div class="modal-row">
+              <label>Crafting strategy for this order</label>
+              <div class="modal-config-block">
+                <div class="modal-config-row">
+                  <span class="lbl">Use focus</span>
+                  <span class="toggle-state on" id="ord-modal-focus-off">OFF</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="ord-modal-focus" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-state" id="ord-modal-focus-on">ON</span>
+                </div>
+                <div class="modal-config-row">
+                  <span class="lbl">Stack profit</span>
+                  <span class="toggle-state" id="ord-modal-stack-off">OFF</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="ord-modal-stack" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-state on" id="ord-modal-stack-on">ON</span>
+                  <div class="stack-from-modal" id="ord-modal-stack-from-wrap">
+                    <span>from</span>
+                    <select id="ord-modal-stack-from">
+                      <option value="4">T4</option>
+                      <option value="5">T5</option>
+                      <option value="6">T6</option>
+                      <option value="7" selected>T7</option>
+                      <option value="8">T8</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button class="btn-secondary" id="ord-modal-cancel" type="button">Cancel</button>
+              <button class="btn-primary" id="ord-modal-submit" type="button">Add to session</button>
+            </div>
+          </div>
+        </div><!-- /.modal-overlay -->
+
+      </div><!-- /#app-orders -->
+
+      <div id="app-catalogue" class="tab-view">
+        <div class="cat-body">
+
+          <!-- Left: price table -->
+          <div class="cat-card">
+            <div class="cat-toolbar">
+              <span class="cat-toolbar-label">Resource</span>
+              <button class="cat-resource-pill on" data-resource="ORE" type="button">⛏ Ore</button>
+              <button class="cat-resource-pill" data-resource="WOOD" type="button">🪵 Wood</button>
+              <button class="cat-resource-pill" data-resource="FIBER" type="button">🌿 Fiber</button>
+              <button class="cat-resource-pill" data-resource="HIDE" type="button">🐾 Hide</button>
+              <div class="cat-sep"></div>
+              <div class="cat-city-group">
+                <label for="cat-raw-city">Raw RSS city</label>
+                <select class="cat-city-select" id="cat-raw-city">
+                  <option value="Fort Sterling">Fort Sterling</option>
+                  <option value="Lymhurst">Lymhurst</option>
+                  <option value="Bridgewatch">Bridgewatch</option>
+                  <option value="Martlock">Martlock</option>
+                  <option value="Thetford">Thetford</option>
+                  <option value="Caerleon">Caerleon</option>
+                  <option value="Brecilien">Brecilien</option>
+                </select>
+              </div>
+              <div class="cat-city-group">
+                <label for="cat-refined-city">Refined RSS city</label>
+                <select class="cat-city-select" id="cat-refined-city">
+                  <option value="Fort Sterling">Fort Sterling</option>
+                  <option value="Lymhurst">Lymhurst</option>
+                  <option value="Bridgewatch">Bridgewatch</option>
+                  <option value="Martlock">Martlock</option>
+                  <option value="Thetford">Thetford</option>
+                  <option value="Caerleon">Caerleon</option>
+                  <option value="Brecilien">Brecilien</option>
+                </select>
+              </div>
+              <button class="cat-refresh-btn" id="cat-refresh-btn" type="button">↻ Refresh</button>
+            </div>
+            <table class="cat-table">
+              <thead>
+                <tr>
+                  <th class="center" style="width:60px">Tier</th>
+                  <th class="split-th">
+                    <div class="split-header">
+                      <div>Raw resource</div>
+                      <div>Refined resource</div>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="cat-tbody">
+                <tr class="empty-row"><td colspan="2" class="muted">Click Refresh to load prices.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Right: config panels -->
+          <div class="cat-right">
+
+            <div class="cat-card">
+              <div class="cat-section-title">Premium &amp; Focus</div>
+              <div class="cat-section-body">
+                <div class="cat-config-row">
+                  <span class="cat-config-label">Premium price (silver)</span>
+                  <input class="cat-config-input" type="number" id="cat-premium-price" />
+                </div>
+                <div class="cat-config-row">
+                  <span class="cat-config-label">Focus / month</span>
+                  <span class="num">300 000</span>
+                </div>
+                <div class="cat-config-row">
+                  <span class="cat-config-label">Cost per focus</span>
+                  <span class="cat-calc-display" id="cat-cost-per-focus">80 s</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="cat-card">
+              <div class="cat-section-title">Focus / Transmute Cost per Tier</div>
+              <div class="cat-cost-table-wrap">
+                <table class="cat-cost-table">
+                  <thead>
+                    <tr>
+                      <th>Tier</th>
+                      <th>Focus</th>
+                      <th>R1 (T-1)</th>
+                      <th>R2 (E-1)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cat-cost-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="cat-card">
+              <div class="cat-section-title">City Hearts</div>
+              <div class="cat-section-body cat-hearts-body" id="cat-hearts-container"></div>
+            </div>
+
+          </div><!-- /.cat-right -->
+        </div><!-- /.cat-body -->
+      </div><!-- /#app-catalogue -->
+
+    </main>
+
+    <!-- ── Footer ── -->
+    <footer class="footer">
+      <span>albionforge</span>
+      <span class="muted">·</span>
+      <span class="muted">data via Albion Online Data Project</span>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
