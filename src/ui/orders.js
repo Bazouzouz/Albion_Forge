@@ -1,7 +1,7 @@
 import { RESOURCES, getIconUrl, T3_REFINED_IDS } from '../data/items.js';
 import { fetchPricesForResource }                  from '../api/albionApi.js';
 import { getEffectiveRawPrice, getAcquisitionChain } from './transmute.js';
-import { getHeartPrice, getPremiumPrice }           from './catalogue.js';
+import { getHeartPrice, getPremiumPrice, getFocusCost, getCostPerFocus } from './catalogue.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -431,6 +431,51 @@ function renderBill(bill) {
       : '<div class="bill-empty">— None (no R2 recipes) —</div>';
   }
 
+  // Focus Cost
+  const focusEl = document.getElementById('ord-bill-focus');
+  if (focusEl) {
+    const costPerFocus = getCostPerFocus();
+    const focusItems   = Object.values(refineMap).filter(r => r.focus);
+
+    if (!focusItems.length) {
+      focusEl.innerHTML = '<div class="bill-empty">— No focus used —</div>';
+    } else {
+      let grandFocus = 0, grandSilver = 0;
+
+      const rows = focusItems.map(r => {
+        const fpu    = getFocusCost(r.tierKey);
+        const totalF = fpu * r.qty;
+        const silver = totalF * costPerFocus;
+        grandFocus  += totalF;
+        grandSilver += silver;
+
+        return `<div class="bill-row has-tooltip">
+          <img class="bill-icon" src="${iconUrl(r.itemId)}" onerror="this.style.display='none'" />
+          <div class="bill-name">${r.name} <span class="bill-tier-tag">${r.tierKey}</span>
+            <div class="bill-name-sub">${fpu} focus/unit · recipe ${r.decision.toUpperCase()}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="bill-qty">${fmt(totalF)} focus</div>
+            <div class="bill-cost">${fmt(silver)} silver</div>
+          </div>
+          ${buildTooltip([
+            ['Focus/unit',   String(fpu)],
+            ['Qty',          fmt(r.qty)],
+            ['Total focus',  fmt(totalF)],
+            ['Silver/focus', fmt(costPerFocus)],
+            ['__formula__',  `${fpu} × ${r.qty} × ${fmt(costPerFocus)} silver/focus`],
+          ], 'left')}</div>`;
+      });
+
+      rows.push(`<div class="bill-focus-total">
+        <span>Total focus</span>
+        <span>${fmt(grandFocus)} focus = <strong>${fmt(grandSilver)} silver</strong></span>
+      </div>`);
+
+      focusEl.innerHTML = rows.join('');
+    }
+  }
+
   // Totals
   const totalsEl = document.getElementById('ord-totals');
   if (totalsEl && orders.length > 0) {
@@ -479,7 +524,7 @@ function rebuildAll() {
     const countEl = document.getElementById('ord-count');
     if (list)    list.innerHTML = `<div class="ord-empty">No orders yet<div class="ord-empty-hint">Click <strong>+ Add order</strong> to add items</div></div>`;
     if (countEl) countEl.textContent = '0 orders';
-    const empties = { 'ord-bill-buy':'— No items to buy —', 'ord-bill-transmute':'— No transmutes —', 'ord-bill-refine':'— No recipes —', 'ord-bill-hearts':'— No hearts needed —' };
+    const empties = { 'ord-bill-buy':'— No items to buy —', 'ord-bill-transmute':'— No transmutes —', 'ord-bill-refine':'— No recipes —', 'ord-bill-hearts':'— No hearts needed —', 'ord-bill-focus':'— No focus used —' };
     for (const [id, msg] of Object.entries(empties)) {
       const el = document.getElementById(id);
       if (el) el.innerHTML = `<div class="bill-empty">${msg}</div>`;

@@ -1798,6 +1798,8 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
 .bill-qty { font-size: 12px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .bill-cost { font-size: 10px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 .bill-empty { font-size: 11px; color: var(--text-tertiary); padding: 6px 0; font-style: italic; }
+.bill-focus-total { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-secondary); padding: 6px 0 2px; margin-top: 4px; border-top: 0.5px solid var(--border); }
+.bill-focus-total strong { color: var(--text-primary); font-weight: 600; }
 
 .bill-trm-icons { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .bill-trm-arrow { color: var(--text-tertiary); font-size: 11px; padding: 0 2px; }
