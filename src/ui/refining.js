@@ -494,11 +494,14 @@ export async function initRefining() {
   const taxEl = document.getElementById('rfn-tax');
   if (taxEl) {
     taxEl.value = taxRate;
-    taxEl.addEventListener('change', () => {
-      taxRate = parseFloat(taxEl.value) || 3;
+    const applyTax = () => {
+      const n = parseFloat(taxEl.value);
+      taxRate = isNaN(n) ? 3 : n;
       lsSet('refining.tax', taxRate);
       renderTable();
-    });
+    };
+    taxEl.addEventListener('input', applyTax);
+    taxEl.addEventListener('change', applyTax);
   }
 
   // Refresh button
