@@ -1,5 +1,5 @@
 import { RESOURCES, TIERS, ENCHANTS, getIconUrl, T3_REFINED_IDS } from '../data/items.js';
-import { fetchPricesForResource }                  from '../api/albionApi.js';
+import { fetchPricesForResource, clearCache }       from '../api/albionApi.js';
 import { getEffectiveRawPrice }                    from './transmute.js';
 import { getHeartPrice, getFocusCost, getPremiumPrice } from './catalogue.js';
 
@@ -392,6 +392,7 @@ async function doRefresh() {
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
 
   try {
+    clearCache();
     apiPrices = await fetchPricesForResource(currentResource, [currentCity]);
   } catch (err) {
     console.error('[refining] fetch error:', err);

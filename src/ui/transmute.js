@@ -1,5 +1,5 @@
 import { RESOURCES, TIERS, ENCHANTS, getIconUrl } from '../data/items.js';
-import { fetchPricesForResource }                   from '../api/albionApi.js';
+import { fetchPricesForResource, clearCache }        from '../api/albionApi.js';
 import { getTransmuteCost }                         from './catalogue.js';
 
 const RAW_NAMES = {
@@ -242,6 +242,7 @@ async function doRefresh() {
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
 
   try {
+    clearCache();
     apiPrices = await fetchPricesForResource(currentResource, [currentCity]);
     renderTable();
     window.dispatchEvent(new CustomEvent('forge:prices-changed'));
