@@ -1,6 +1,7 @@
 import { RESOURCES, TIERS, ENCHANTS, getIconUrl } from '../data/items.js';
 import { fetchPricesForResource, clearCache }        from '../api/albionApi.js';
 import { getTransmuteCost }                         from './catalogue.js';
+import { BONUS_CITY }                               from '../data/cities.js';
 
 const RAW_NAMES = {
   ORE:   { 4:'Iron Ore',    5:'Titanium Ore',  6:'Runite Ore',    7:'Meteorite Ore', 8:'Adamantium Ore' },
@@ -12,7 +13,7 @@ const RAW_NAMES = {
 const ENCHANT_PREFIXES = ['', 'Uncommon ', 'Rare ', 'Exceptional ', 'Pristine '];
 
 let currentResource = 'ORE';
-let currentCity     = 'Thetford';
+let currentCity     = BONUS_CITY['ORE'];
 let apiPrices       = {}; // itemId → city → { sell_price_min }
 let manualPrices    = {}; // resourceType → tierKey → number
 
@@ -339,17 +340,21 @@ export function getAcquisitionChain(rss, tier, enchant) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+function loadCityForResource(rt) {
+  return localStorage.getItem(`transmute.city.${rt}`) ?? BONUS_CITY[rt];
+}
+
 export async function initTransmute() {
   const savedResource = localStorage.getItem('transmute.resource');
   if (['ORE', 'WOOD', 'FIBER', 'HIDE'].includes(savedResource)) currentResource = savedResource;
 
-  const savedCity = localStorage.getItem('transmute.city');
-  if (savedCity) currentCity = savedCity;
+  currentCity = loadCityForResource(currentResource);
 
   manualPrices = loadManualPrices();
 
   // Resource pills
   const pills = document.querySelectorAll('.trm-resource-pill');
+  const citySelect = document.getElementById('trm-city-select');
   pills.forEach(pill => {
     pill.classList.toggle('on', pill.dataset.resource === currentResource);
     pill.addEventListener('click', () => {
@@ -357,17 +362,18 @@ export async function initTransmute() {
       pill.classList.add('on');
       currentResource = pill.dataset.resource;
       localStorage.setItem('transmute.resource', currentResource);
+      currentCity = loadCityForResource(currentResource);
+      if (citySelect) citySelect.value = currentCity;
       doRefresh();
     });
   });
 
   // City select
-  const citySelect = document.getElementById('trm-city-select');
   if (citySelect) {
     citySelect.value = currentCity;
     citySelect.addEventListener('change', () => {
       currentCity = citySelect.value;
-      localStorage.setItem('transmute.city', currentCity);
+      localStorage.setItem(`transmute.city.${currentResource}`, currentCity);
       doRefresh();
     });
   }
