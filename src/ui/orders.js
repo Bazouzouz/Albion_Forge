@@ -5,7 +5,7 @@ import { getHeartPrice, getPremiumPrice, getFocusCost, getCostPerFocus } from '.
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const RECIPES = { 4:{r1:2,r2:1}, 5:{r1:3,r2:2}, 6:{r1:4,r2:3}, 7:{r1:5,r2:4}, 8:{r1:6,r2:5} };
+const RECIPES = { 4:{r1:2,r2:1}, 5:{r1:3,r2:2}, 6:{r1:4,r2:3}, 7:{r1:5,r2:4}, 8:{r1:5,r2:4} };
 const RRR_NO_FOCUS = 0.367;
 const RRR_FOCUS    = 0.539;
 const TAX          = 0.03;
