@@ -14,7 +14,7 @@ const RECIPES = {
   5: { r1: 3, r2: 2 },
   6: { r1: 4, r2: 3 },
   7: { r1: 5, r2: 4 },
-  8: { r1: 6, r2: 5 },
+  8: { r1: 5, r2: 4 },
 };
 
 const REFINED_NAMES = {
