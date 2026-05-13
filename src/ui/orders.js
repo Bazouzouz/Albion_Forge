@@ -297,7 +297,7 @@ function renderOrdersList(orderResults) {
     ]);
 
     return `<div class="order-item">
-      <img class="order-icon" src="${getIconUrl(refItemId)}" onerror="this.style.display='none'" />
+      <img class="order-icon" src="${getIconUrl(refItemId)}" onerror="retryIcon(this,'display')" />
       <div class="order-info">
         <div class="order-name-row">
           <span class="order-name">${refinedName(o.rss, o.tier, o.enchant)}</span>
@@ -336,7 +336,7 @@ function renderBill(bill) {
     const items = Object.values(buyMap);
     buyEl.innerHTML = items.length
       ? items.map(b => `<div class="bill-row has-tooltip">
-          <img class="bill-icon" src="${iconUrl(b.itemId)}" onerror="this.style.display='none'" />
+          <img class="bill-icon" src="${iconUrl(b.itemId)}" onerror="retryIcon(this,'display')" />
           <div class="bill-name">${b.name}${b.tierKey ? ` <span class="bill-tier-tag">${b.tierKey}</span>` : ''}<div class="bill-name-sub">${b.type}</div></div>
           <div style="text-align:right">
             <div class="bill-qty">×${fmt(b.qty)}</div>
@@ -363,9 +363,9 @@ function renderBill(bill) {
           const totalSilver = t.qty * t.silverCostPerUnit;
           return `<div class="bill-row has-tooltip">
             <div class="bill-trm-icons">
-              <img class="bill-icon" src="${iconUrl(t.srcItemId)}" onerror="this.style.display='none'" />
+              <img class="bill-icon" src="${iconUrl(t.srcItemId)}" onerror="retryIcon(this,'display')" />
               <span class="bill-trm-arrow">→</span>
-              <img class="bill-icon" src="${iconUrl(t.dstItemId)}" onerror="this.style.display='none'" />
+              <img class="bill-icon" src="${iconUrl(t.dstItemId)}" onerror="retryIcon(this,'display')" />
             </div>
             <div class="bill-name">
               ${rawName(t.rss, t.srcTier, t.srcEnchant)} <span class="bill-tier-tag">${t.srcTk}</span> → ${rawName(t.rss, t.dstTier, t.dstEnchant)} <span class="bill-tier-tag">${t.dstTk}</span>
@@ -396,7 +396,7 @@ function renderBill(bill) {
     const items = Object.values(refineMap);
     refEl.innerHTML = items.length
       ? items.map(r => `<div class="bill-row has-tooltip">
-          <img class="bill-icon" src="${iconUrl(r.itemId)}" onerror="this.style.display='none'" />
+          <img class="bill-icon" src="${iconUrl(r.itemId)}" onerror="retryIcon(this,'display')" />
           <div class="bill-name">${r.name} <span class="bill-tier-tag">${r.tierKey}</span><div class="bill-name-sub">${r.decision === 'r2' ? 'with city heart' : 'no heart'} · ${r.focus ? 'focus' : 'no focus'}</div></div>
           <div style="text-align:right">
             <div class="bill-qty">×${fmt(r.qty)}</div>
@@ -417,7 +417,7 @@ function renderBill(bill) {
     const items = Object.values(heartMap);
     heartsEl.innerHTML = items.length
       ? items.map(h => `<div class="bill-row has-tooltip">
-          <img class="bill-icon" src="${iconUrl(h.itemId)}" onerror="this.style.display='none'" />
+          <img class="bill-icon" src="${iconUrl(h.itemId)}" onerror="retryIcon(this,'display')" />
           <div class="bill-name">${h.name}</div>
           <div style="text-align:right">
             <div class="bill-qty">×${fmt(h.qty)}</div>
@@ -450,7 +450,7 @@ function renderBill(bill) {
         grandSilver += silver;
 
         return `<div class="bill-row has-tooltip">
-          <img class="bill-icon" src="${iconUrl(r.itemId)}" onerror="this.style.display='none'" />
+          <img class="bill-icon" src="${iconUrl(r.itemId)}" onerror="retryIcon(this,'display')" />
           <div class="bill-name">${r.name} <span class="bill-tier-tag">${r.tierKey}</span>
             <div class="bill-name-sub">${fpu} focus/unit · recipe ${r.decision.toUpperCase()}</div>
           </div>

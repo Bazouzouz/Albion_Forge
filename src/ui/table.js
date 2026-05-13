@@ -160,7 +160,7 @@ export function renderMarketTable(rows) {
       <td>
         <span class="item-cell">
           <img class="item-icon" src="${iconUrl}" alt="" width="24" height="24"
-               loading="lazy" onerror="this.style.visibility='hidden'" />
+               loading="lazy" onerror="retryIcon(this)" />
           <span>${resLabel}</span>
         </span>
       </td>

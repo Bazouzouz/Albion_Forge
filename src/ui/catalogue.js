@@ -149,7 +149,7 @@ function tierKey(tier, enchant) {
 function itemBlock(itemId, name, price, ageObj) {
   return `<div class="item-block">
     <div class="item-cell">
-      <img class="cat-item-icon" src="${getIconUrl(itemId)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
+      <img class="cat-item-icon" src="${getIconUrl(itemId)}" alt="" loading="lazy" onerror="retryIcon(this)" />
       <span class="cat-item-name">${name}</span>
     </div>
     <div class="price-block">
@@ -263,7 +263,7 @@ function renderHearts() {
     const price   = lsGet(`cat_heart_${h.resourceType}`, 38_000);
     const iconUrl = `https://render.albiononline.com/v1/item/${h.iconId}.png?size=40`;
     return `<div class="cat-heart-row">
-      <img class="cat-heart-icon" src="${iconUrl}" alt="" onerror="this.style.display='none'" />
+      <img class="cat-heart-icon" src="${iconUrl}" alt="" onerror="retryIcon(this,'display')" />
       <div class="cat-heart-info">
         <div class="cat-heart-name">${h.name}</div>
         <div class="cat-heart-id">${h.desc}</div>

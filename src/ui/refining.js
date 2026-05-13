@@ -320,7 +320,7 @@ function renderTable() {
 
       html += `<tr>
         <td><div class="item-cell">
-          <img class="cat-item-icon" src="${getIconUrl(itemId)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
+          <img class="cat-item-icon" src="${getIconUrl(itemId)}" alt="" loading="lazy" onerror="retryIcon(this)" />
           <span class="cat-item-name">${itemName}${stackBadge}</span>
         </div></td>
         <td style="text-align:center"><span class="cat-tier-tag">${tk}</span></td>

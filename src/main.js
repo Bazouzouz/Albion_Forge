@@ -1,3 +1,19 @@
+// Icon retry — render.albiononline.com occasionally rate-limits or times out.
+// Called via onerror on <img> tags; retries up to 2 times before hiding.
+window.retryIcon = function(img, hideMode) {
+  const src   = img.dataset.originalSrc || img.src;
+  img.dataset.originalSrc = src;
+  const tries = (img.dataset.iconRetries | 0) + 1;
+  img.dataset.iconRetries = tries;
+  if (tries <= 2) {
+    setTimeout(() => { img.src = ''; img.src = src; }, tries * 1500);
+  } else if (hideMode === 'display') {
+    img.style.display = 'none';
+  } else {
+    img.style.visibility = 'hidden';
+  }
+};
+
 // Point d'entrée principal de l'application.
 // Initialise les composants UI (filtres, tableau, stats),
 // orchestre les appels API et déclenche les calculs de profits.
