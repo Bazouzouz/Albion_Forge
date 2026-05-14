@@ -43,7 +43,7 @@ let stackFromTier   = 7;
 let qty             = 100;
 let taxRate         = 3;
 let apiPrices       = {}; // itemId → city → { sell_price_min, sell_price_min_date }
-let manualBarPrices = {}; // resourceType → tierKey → number
+let manualRefinedPrices = loadManualRefinedFromStorage(); // resourceType → tierKey → number
 const lastResults   = {}; // resourceType → tierKey → result object
 
 // ── localStorage ──────────────────────────────────────────────────────────────
@@ -64,6 +64,21 @@ function lsSet(key, val) {
   localStorage.setItem(key, String(val));
 }
 
+function loadManualRefinedFromStorage() {
+  const result = {};
+  for (const rt of Object.keys(RESOURCES)) {
+    result[rt] = {};
+    for (const tier of TIERS) {
+      for (const enchant of ENCHANTS) {
+        const tk = tierKey(tier, enchant);
+        const v  = localStorage.getItem(`refining.manual.${rt}.${tk}`);
+        if (v !== null) result[rt][tk] = Number(v);
+      }
+    }
+  }
+  return result;
+}
+
 function loadState() {
   const saved = lsGet('refining.resource', 'ORE');
   if (['ORE', 'WOOD', 'FIBER', 'HIDE'].includes(saved)) currentResource = saved;
@@ -73,17 +88,7 @@ function loadState() {
   stackFromTier = lsGetN('refining.stackFromTier', 7);
   qty           = lsGetN('refining.qty', 100);
   taxRate       = lsGetN('refining.tax', 3);
-
-  for (const rt of Object.keys(RESOURCES)) {
-    manualBarPrices[rt] = {};
-    for (const tier of TIERS) {
-      for (const enchant of ENCHANTS) {
-        const tk = tierKey(tier, enchant);
-        const v  = localStorage.getItem(`refining.manual.${rt}.${tk}`);
-        if (v !== null) manualBarPrices[rt][tk] = Number(v);
-      }
-    }
-  }
+  manualRefinedPrices = loadManualRefinedFromStorage();
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -111,15 +116,15 @@ function getRawApiPrice(rt, tier, enchant) {
   return (data?.sell_price_min > 0) ? data.sell_price_min : null;
 }
 
-function getApiBarPrice(tier, enchant) {
+function getApiRefinedPrice(tier, enchant) {
   const itemId = RESOURCES[currentResource].tiers[`T${tier}`].refined[enchant];
   const data   = apiPrices[itemId]?.[currentCity];
   return (data?.sell_price_min > 0) ? data.sell_price_min : null;
 }
 
-function getEffectiveBarPrice(tier, enchant) {
+function getEffectiveRefinedPrice(tier, enchant) {
   const tk = tierKey(tier, enchant);
-  return manualBarPrices[currentResource]?.[tk] ?? getApiBarPrice(tier, enchant);
+  return manualRefinedPrices[currentResource]?.[tk] ?? getApiRefinedPrice(tier, enchant);
 }
 
 // T3 refined price for T4 input — reads from refining's own apiPrices using the current city
@@ -142,7 +147,7 @@ function getRefinedInputCost(tier, enchant, stackFromT) {
     return { cost: lower.unitInvest ?? 0, stacked: true };
   }
 
-  const price = getEffectiveBarPrice(tier - 1, enchant);
+  const price = getEffectiveRefinedPrice(tier - 1, enchant);
   return { cost: price ?? 0, stacked: false };
 }
 
@@ -166,7 +171,7 @@ function computeRow(rt, tier, enchant, stackFromT) {
   const unitInvest = decision === 'r2' ? r2 : r1;
   const batchInvest = unitInvest * qty;
 
-  const barHdv            = getEffectiveBarPrice(tier, enchant);
+  const barHdv            = getEffectiveRefinedPrice(tier, enchant);
   const tax               = taxRate / 100;
   const salePriceAfterTax = barHdv != null ? barHdv * (1 - tax) : null;
 
@@ -261,7 +266,7 @@ function eqTooltip(r) {
 function profitTooltip(r) {
   const sign = (r.profit != null && r.profit >= 0) ? '+' : '−';
   return buildTooltip([
-    ['Bar HDV :', fmt(r.barHdv)],
+    ['Refined HDV :', fmt(r.barHdv)],
     ['Tax :', (r.tax * 100).toFixed(1) + '%'],
     ['Sale after tax :', fmt(r.salePriceAfterTax)],
     ['Equilibrium :', fmt(r.equilibrium)],
@@ -315,7 +320,7 @@ function renderTable() {
         ? '<span class="stack-indicator" title="Refined input stacked from own refining">⬢</span>'
         : '';
 
-      const manual     = manualBarPrices[rt]?.[tk];
+      const manual     = manualRefinedPrices[rt]?.[tk];
       const overrideCls = manual != null ? ' overridden' : '';
 
       html += `<tr>
@@ -344,14 +349,14 @@ function renderTable() {
     input.addEventListener('change', () => {
       const { rt: inputRt, tk: inputTk } = input.dataset;
       const val = input.value.trim();
-      if (!manualBarPrices[inputRt]) manualBarPrices[inputRt] = {};
+      if (!manualRefinedPrices[inputRt]) manualRefinedPrices[inputRt] = {};
       if (val === '') {
-        delete manualBarPrices[inputRt][inputTk];
+        delete manualRefinedPrices[inputRt][inputTk];
         localStorage.removeItem(`refining.manual.${inputRt}.${inputTk}`);
         input.classList.remove('overridden');
       } else {
         const n = Number(val);
-        manualBarPrices[inputRt][inputTk] = n;
+        manualRefinedPrices[inputRt][inputTk] = n;
         lsSet(`refining.manual.${inputRt}.${inputTk}`, n);
         input.classList.add('overridden');
       }
@@ -529,4 +534,11 @@ export function getUnitInvest(resource, tk) {
 
 export function getRefiningResult(resource, tk) {
   return lastResults[resource]?.[tk] ?? null;
+}
+
+// Returns the manually-entered refined resource price for any resource type and tier key,
+// or null if no override exists. Used by Orders so it respects Refining's manual inputs
+// while keeping its own focus/stack decisions.
+export function getManualRefinedPrice(rt, tk) {
+  return manualRefinedPrices[rt]?.[tk] ?? null;
 }

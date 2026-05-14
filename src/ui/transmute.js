@@ -14,7 +14,7 @@ const ENCHANT_PREFIXES = ['', 'Uncommon ', 'Rare ', 'Exceptional ', 'Pristine ']
 
 let currentResource = 'ORE';
 let currentCity     = BONUS_CITY['ORE'];
-let apiPrices       = {}; // itemId → city → { sell_price_min }
+const apiPricesByResource = {}; // rt → itemId → city → { sell_price_min }
 let manualPrices    = {}; // resourceType → tierKey → number
 
 // ── localStorage ──────────────────────────────────────────────────────────────
@@ -61,7 +61,8 @@ function fmt(n) {
 
 function getApiPrice(rt, tier, enchant) {
   const itemId = RESOURCES[rt].tiers[`T${tier}`].raw[enchant];
-  return apiPrices[itemId]?.[currentCity]?.sell_price_min ?? null;
+  const city   = rt === currentResource ? currentCity : loadCityForResource(rt);
+  return apiPricesByResource[rt]?.[itemId]?.[city]?.sell_price_min ?? null;
 }
 
 function getEffectivePrice(rt, tier, enchant) {
@@ -244,7 +245,7 @@ async function doRefresh() {
 
   try {
     clearCache();
-    apiPrices = await fetchPricesForResource(currentResource, [currentCity]);
+    apiPricesByResource[currentResource] = await fetchPricesForResource(currentResource, [currentCity]);
     renderTable();
     window.dispatchEvent(new CustomEvent('forge:prices-changed'));
   } catch (err) {

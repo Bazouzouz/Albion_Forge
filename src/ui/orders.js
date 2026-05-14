@@ -2,6 +2,7 @@ import { RESOURCES, getIconUrl, T3_REFINED_IDS } from '../data/items.js';
 import { fetchPricesForResource }                  from '../api/albionApi.js';
 import { getEffectiveRawPrice, getAcquisitionChain } from './transmute.js';
 import { getHeartPrice, getPremiumPrice, getFocusCost, getCostPerFocus } from './catalogue.js';
+import { getManualRefinedPrice } from './refining.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,15 @@ function getOrdPrice(itemId) {
   return ordApiPrices[itemId]?.[activeCity()]?.sell_price_min ?? null;
 }
 
+// Checks Refining's manual refined-resource price overrides first, then falls back to the Orders API cache.
+function getBarPrice(rss, tier, enchant) {
+  const tk     = tierLabel(tier, enchant);
+  const manual = getManualRefinedPrice(rss, tk);
+  if (manual != null) return manual;
+  const itemId = RESOURCES[rss].tiers[`T${tier}`].refined[enchant];
+  return getOrdPrice(itemId);
+}
+
 // ── Price fetch ───────────────────────────────────────────────────────────────
 
 async function doRefresh() {
@@ -114,8 +124,7 @@ function getRefinedInput(rss, tier, enchant, qty, useFocus, useStack, stackFromT
     const sub      = computeOrderResult(subOrder);
     return { cost: sub.unitCost, stacked: true, subResult: sub };
   }
-  const lowerRefId = RESOURCES[rss].tiers[`T${tier - 1}`].refined[enchant];
-  return { cost: getOrdPrice(lowerRefId) ?? 0, stacked: false, subResult: null };
+  return { cost: getBarPrice(rss, tier - 1, enchant) ?? 0, stacked: false, subResult: null };
 }
 
 function computeOrderResult(order) {
@@ -144,8 +153,7 @@ function computeOrderResult(order) {
   const lowerInputNeeded = Math.ceil(qty * (1 - rrr)) + 2;
   const heartsNeeded     = decision === 'r2' ? Math.ceil(qty * (1 - rrr)) + 2 : 0;
 
-  const refItemId = RESOURCES[rss].tiers[`T${tier}`].refined[enchant];
-  const barHdv    = getOrdPrice(refItemId);
+  const barHdv = getBarPrice(rss, tier, enchant);
   const revenue   = barHdv != null ? barHdv * (1 - TAX) * qty : null;
   const profit    = revenue != null ? revenue - unitCost * qty : null;
 
@@ -287,7 +295,7 @@ function renderOrdersList(orderResults) {
     const saleAfterTax  = r.barHdv != null ? r.barHdv * (1 - TAX) : null;
     const profitPerUnit = saleAfterTax != null ? saleAfterTax - r.unitCost : null;
     const ttProfit = buildTooltip([
-      ['Bar HDV',        fmt(r.barHdv)],
+      ['Refined HDV',    fmt(r.barHdv)],
       ['Tax',            Math.round(TAX * 100) + '%'],
       ['Sale after tax', fmt(saleAfterTax)],
       ['Unit cost',      fmt(r.unitCost)],
