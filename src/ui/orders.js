@@ -342,8 +342,11 @@ function renderBill(bill) {
   const buyEl = document.getElementById('ord-bill-buy');
   if (buyEl) {
     const items = Object.values(buyMap);
-    buyEl.innerHTML = items.length
-      ? items.map(b => `<div class="bill-row has-tooltip">
+    if (!items.length) {
+      buyEl.innerHTML = '<div class="bill-empty">— No items to buy —</div>';
+    } else {
+      const totalShoppingCost = items.reduce((sum, b) => sum + b.qty * b.unitPrice, 0);
+      const rows = items.map(b => `<div class="bill-row has-tooltip">
           <img class="bill-icon" src="${iconUrl(b.itemId)}" onerror="retryIcon(this,'display')" />
           <div class="bill-name">${b.name}${b.tierKey ? ` <span class="bill-tier-tag">${b.tierKey}</span>` : ''}<div class="bill-name-sub">${b.type}</div></div>
           <div style="text-align:right">
@@ -355,8 +358,13 @@ function renderBill(bill) {
             ['Quantity',    fmt(b.qty)],
             ['Unit price',  fmt(b.unitPrice)],
             ['__formula__', 'qty × unitPrice'],
-          ], 'left')}</div>`).join('')
-      : '<div class="bill-empty">— No items to buy —</div>';
+          ], 'left')}</div>`);
+      rows.push(`<div class="bill-focus-total">
+        <span>Total shopping cost</span>
+        <span><strong>${fmt(totalShoppingCost)} silver</strong></span>
+      </div>`);
+      buyEl.innerHTML = rows.join('');
+    }
   }
 
   // Transmutations — sorted by destination tier then enchant
@@ -365,11 +373,14 @@ function renderBill(bill) {
     const items = [...transmutes].sort((a, b) =>
       a.dstTier !== b.dstTier ? a.dstTier - b.dstTier : a.dstEnchant - b.dstEnchant
     );
-    trmEl.innerHTML = items.length
-      ? items.map(t => {
-          const badgeLabel  = t.via === 'r1' ? 'R1 (T-1)' : 'R2 (E-1)';
-          const totalSilver = t.qty * t.silverCostPerUnit;
-          return `<div class="bill-row has-tooltip">
+    if (!items.length) {
+      trmEl.innerHTML = '<div class="bill-empty">— No transmutes needed —</div>';
+    } else {
+      const totalTransmuteCost = items.reduce((sum, t) => sum + t.qty * t.silverCostPerUnit, 0);
+      const rows = items.map(t => {
+        const badgeLabel  = t.via === 'r1' ? 'R1 (T-1)' : 'R2 (E-1)';
+        const totalSilver = t.qty * t.silverCostPerUnit;
+        return `<div class="bill-row has-tooltip">
             <div class="bill-trm-icons">
               <img class="bill-icon" src="${iconUrl(t.srcItemId)}" onerror="retryIcon(this,'display')" />
               <span class="bill-trm-arrow">→</span>
@@ -394,8 +405,13 @@ function renderBill(bill) {
                 : 'No silver cost (focus-paid step)'],
             ], 'left')}
           </div>`;
-        }).join('')
-      : '<div class="bill-empty">— No transmutes needed —</div>';
+      });
+      rows.push(`<div class="bill-focus-total">
+        <span>Total transmute cost</span>
+        <span><strong>${fmt(totalTransmuteCost)} silver</strong></span>
+      </div>`);
+      trmEl.innerHTML = rows.join('');
+    }
   }
 
   // Refining recipes
