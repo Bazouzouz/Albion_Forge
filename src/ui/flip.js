@@ -53,10 +53,11 @@ const state = {
   showNoPrice:    false,
 };
 
-let priceMap      = new Map(); // itemId → Map<city, priceEntry>
-let volumeMap     = new Map(); // itemId → Map<city, avgDailyVolume>
-let loading       = false;
-let renderedItems = new Map(); // itemId → full item+pair object (for pin lookup)
+let priceMap             = new Map(); // itemId → Map<city, priceEntry>  (single quality)
+let allQualityPriceMaps  = new Map(); // quality → priceMap             (quality === 0 mode)
+let volumeMap            = new Map(); // itemId → Map<city, avgDailyVolume>
+let loading              = false;
+let renderedItems        = new Map(); // "itemId_qN" → full item+pair object (for pin lookup)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -215,7 +216,7 @@ function buildCatBar() {
 function renderCard(item) {
   const { itemId, name, category, tier, enchant } = item;
   const { pair, buyAgeMin, sellAgeMin, buyVol, sellVol } = item;
-  const quality = state.quality;
+  const quality = item.displayQuality ?? state.quality;
 
   if (!pair) {
     const msg = item.noPriceReason === 'no-route'
@@ -265,7 +266,7 @@ function renderCard(item) {
 </div>`;
 
   return `
-<div class="flip-card ${isStale ? 'stale' : ''}" data-item-id="${itemId}">
+<div class="flip-card ${isStale ? 'stale' : ''}" data-item-id="${itemId}" data-card-quality="${quality}">
   <div class="fc-head">
     <div class="fc-icon t${tier}">
       <img src="${RENDER_BASE}/${itemId}.png" alt="" onerror="this.style.visibility='hidden'" loading="lazy" />
@@ -323,7 +324,7 @@ function render() {
   const buyCities  = state.buyCityFilter  ? [state.buyCityFilter]  : BUY_CITIES;
   const sellCities = state.sellCityFilter ? [state.sellCityFilter] : SELL_CITIES;
 
-  const items = buildFlipList(FLIP_ITEMS, priceMap, volumeMap, {
+  const filters = {
     buyCities, sellCities,
     sellMode:    state.sellMode,
     taxPct:      state.taxPct,
@@ -334,18 +335,35 @@ function render() {
     minNet:      state.minNet,
     maxAgeMin:   state.maxAgeMin,
     showNoPrice: state.showNoPrice,
-  });
+  };
+
+  let items;
+  if (state.quality === 0 && allQualityPriceMaps.size > 0) {
+    const allItems = [];
+    for (const [q, pm] of allQualityPriceMaps) {
+      for (const it of buildFlipList(FLIP_ITEMS, pm, volumeMap, filters)) {
+        allItems.push({ ...it, displayQuality: q });
+      }
+    }
+    if (!state.showNoPrice) allItems.sort((a, b) => b.pair.net - a.pair.net);
+    items = allItems;
+  } else {
+    items = buildFlipList(FLIP_ITEMS, priceMap, volumeMap, filters);
+  }
 
   const withPair = items.filter(i => i.pair);
   const noData   = items.filter(i => !i.pair);
   let info = `${withPair.length} flip${withPair.length !== 1 ? 's' : ''} · sorted by net profit ↓`;
-  if (priceMap.size > 0) {
+  const dataSize = state.quality === 0
+    ? (allQualityPriceMaps.size > 0 ? [...allQualityPriceMaps.values()][0].size : 0)
+    : priceMap.size;
+  if (dataSize > 0) {
     const total = FLIP_ITEMS.filter(i =>
       state.tiers.includes(i.tier) &&
       state.enchants.includes(i.enchant) &&
       state.categories.includes(i.category)
     ).length;
-    info += ` · ${priceMap.size}/${total} items with API data`;
+    info += ` · ${dataSize}/${total} items with API data`;
   }
   sortInfo.textContent = info;
 
@@ -356,7 +374,10 @@ function render() {
 
   renderedItems.clear();
   for (const item of items) {
-    if (item.pair) renderedItems.set(item.itemId, item);
+    if (item.pair) {
+      const q = item.displayQuality ?? state.quality;
+      renderedItems.set(item.itemId + '_q' + q, item);
+    }
   }
   mosaic.innerHTML = items.map(renderCard).join('');
 }
@@ -387,16 +408,26 @@ async function doRefresh() {
     // Fetch prices across all cities
     const flat = await fetchPrices(itemIds, SELL_CITIES, state.quality);
 
-    // Build priceMap: itemId → Map<city, entry>
+    // Build priceMap(s): itemId → Map<city, entry>
     priceMap = new Map();
+    allQualityPriceMaps = new Map();
     for (const e of flat) {
-      if (!priceMap.has(e.item_id)) priceMap.set(e.item_id, new Map());
-      priceMap.get(e.item_id).set(e.city, {
+      const entry = {
         sell_price_min:      e.sell_price_min,
         sell_price_min_date: e.sell_price_min_date,
         buy_price_max:       e.buy_price_max,
         buy_price_max_date:  e.buy_price_max_date,
-      });
+      };
+      if (state.quality === 0) {
+        const q = e.quality ?? 1;
+        if (!allQualityPriceMaps.has(q)) allQualityPriceMaps.set(q, new Map());
+        const pm = allQualityPriceMaps.get(q);
+        if (!pm.has(e.item_id)) pm.set(e.item_id, new Map());
+        pm.get(e.item_id).set(e.city, entry);
+      } else {
+        if (!priceMap.has(e.item_id)) priceMap.set(e.item_id, new Map());
+        priceMap.get(e.item_id).set(e.city, entry);
+      }
     }
 
     console.info(
@@ -506,7 +537,7 @@ function wireEvents(root) {
     if (!inp) return;
     const card = inp.closest('[data-item-id]');
     if (!card) return;
-    const item = renderedItems.get(card.dataset.itemId);
+    const item = renderedItems.get(card.dataset.itemId + '_q' + card.dataset.cardQuality);
     if (!item?.pair) return;
 
     const newSell  = parseFloat(inp.value) || 0;
@@ -536,7 +567,7 @@ function wireEvents(root) {
     const card = btn.closest('[data-item-id]');
     if (!card) return;
     const itemId = card.dataset.itemId;
-    const item   = renderedItems.get(itemId);
+    const item   = renderedItems.get(itemId + '_q' + card.dataset.cardQuality);
     if (!item?.pair) return;
 
     const { pair, name, tier, enchant, sellVol } = item;
