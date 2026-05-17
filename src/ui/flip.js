@@ -49,8 +49,9 @@ const state = {
   taxPct:         4,
   minRoi:         8,
   minNet:         0,
-  maxAgeMin:      500,
+  maxAgeMin:      180,
   showNoPrice:    false,
+  hideDismissed:  false,
 };
 
 let priceMap             = new Map(); // itemId → Map<city, priceEntry>  (single quality)
@@ -58,6 +59,11 @@ let allQualityPriceMaps  = new Map(); // quality → priceMap             (quali
 let volumeMap            = new Map(); // itemId → Map<city, avgDailyVolume>
 let loading              = false;
 let renderedItems        = new Map(); // "itemId_qN" → full item+pair object (for pin lookup)
+
+const dismissed = new Set(JSON.parse(localStorage.getItem('flip.dismissed') || '[]'));
+function saveDismissed() {
+  localStorage.setItem('flip.dismissed', JSON.stringify([...dismissed]));
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -191,6 +197,14 @@ function buildToolbar() {
     </label>
   </div>
 
+  <div class="flip-tg">
+    <label>Hide dismissed</label>
+    <label class="flip-toggle-switch">
+      <input type="checkbox" id="flip-hide-dismissed" ${state.hideDismissed ? 'checked' : ''}>
+      <span class="flip-toggle-slider"></span>
+    </label>
+  </div>
+
   <button class="flip-refresh-btn" id="flip-refresh-btn" type="button">↻ Refresh</button>
 </div>`;
 }
@@ -238,10 +252,12 @@ function renderCard(item) {
 </div>`;
   }
 
-  const maxAge    = Math.max(buyAgeMin, sellAgeMin);
-  const isStale   = isFinite(maxAge) && maxAge > 60;
-  const roiClass  = roiBadgeClass(pair.roiPct);
-  const netClass  = pair.net > 0 ? 'pos' : 'neg';
+  const maxAge      = Math.max(buyAgeMin, sellAgeMin);
+  const isStale     = isFinite(maxAge) && maxAge > 60;
+  const roiClass    = roiBadgeClass(pair.roiPct);
+  const netClass    = pair.net > 0 ? 'pos' : 'neg';
+  const cardKey     = itemId + '_q' + quality;
+  const isDismissed = dismissed.has(cardKey);
 
   const buyVolHtml  = buyVol  != null ? `<span class="vol-icon">📦</span>${buyVol}/day`  : `<span class="vol-icon">📦</span>—`;
   const sellVolHtml = sellVol != null ? `<span class="vol-icon">📈</span>${sellVol}/day` : `<span class="vol-icon">📈</span>—`;
@@ -266,7 +282,7 @@ function renderCard(item) {
 </div>`;
 
   return `
-<div class="flip-card ${isStale ? 'stale' : ''}" data-item-id="${itemId}" data-card-quality="${quality}">
+<div class="flip-card ${isStale ? 'stale' : ''}${isDismissed ? ' dismissed' : ''}${isDismissed && state.hideDismissed ? ' fc-hidden' : ''}" data-item-id="${itemId}" data-card-quality="${quality}">
   <div class="fc-head">
     <div class="fc-icon t${tier}">
       <img src="${RENDER_BASE}/${itemId}.png" alt="" onerror="this.style.visibility='hidden'" loading="lazy" />
@@ -308,7 +324,10 @@ function renderCard(item) {
       <div class="lbl">Net / unit</div>
       <div class="net ${netClass}">${fmtNet(pair.net)}</div>
     </div>
-    <button class="pin-btn" title="Pin">📌</button>
+    <div class="fc-actions">
+      <button class="dismiss-btn${isDismissed ? ' active' : ''}" data-card-key="${cardKey}" title="${isDismissed ? 'Restore' : 'Dismiss'}">✕</button>
+      <button class="pin-btn" title="Pin">📌</button>
+    </div>
     ${tooltip}
   </div>
 </div>`;
@@ -531,6 +550,14 @@ function wireEvents(root) {
     render();
   });
 
+  // Hide dismissed toggle
+  root.querySelector('#flip-hide-dismissed')?.addEventListener('change', e => {
+    state.hideDismissed = e.target.checked;
+    root.querySelectorAll('.flip-card.dismissed').forEach(card => {
+      card.classList.toggle('fc-hidden', state.hideDismissed);
+    });
+  });
+
   // Sell price edit — event delegation on mosaic
   root.querySelector('#flip-mosaic')?.addEventListener('input', e => {
     const inp = e.target.closest('.fc-sell-input');
@@ -556,6 +583,31 @@ function wireEvents(root) {
       badge.className = `roi-badge ${roiBadgeClass(roi)}`;
       badge.textContent = (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%';
     }
+  });
+
+  // Dismiss button — event delegation on mosaic
+  root.querySelector('#flip-mosaic')?.addEventListener('click', e => {
+    const dismissBtn = e.target.closest('.dismiss-btn');
+    if (!dismissBtn) return;
+    e.stopPropagation();
+
+    const card = dismissBtn.closest('[data-item-id]');
+    if (!card) return;
+    const key = card.dataset.itemId + '_q' + card.dataset.cardQuality;
+
+    if (dismissed.has(key)) {
+      dismissed.delete(key);
+      card.classList.remove('dismissed', 'fc-hidden');
+      dismissBtn.classList.remove('active');
+      dismissBtn.title = 'Dismiss';
+    } else {
+      dismissed.add(key);
+      card.classList.add('dismissed');
+      if (state.hideDismissed) card.classList.add('fc-hidden');
+      dismissBtn.classList.add('active');
+      dismissBtn.title = 'Restore';
+    }
+    saveDismissed();
   });
 
   // Pin button — event delegation on mosaic

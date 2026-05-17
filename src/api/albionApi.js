@@ -7,8 +7,9 @@ import { allRawIds, allRefinedIds, T3_REFINED_IDS } from '../data/items.js';
 const API_BASE      = 'https://europe.albion-online-data.com/api/v2/stats/prices';
 const API_HISTORY   = 'https://europe.albion-online-data.com/api/v2/stats/history';
 const TTL_MS        = 5 * 60 * 1000; // 5-minute cache
-const CHUNK_SIZE    = 100;            // items per request (URL stays well under limits)
-const CONCURRENCY   = 5;             // max simultaneous requests to avoid 429
+const CHUNK_SIZE    = 200;            // items per request — 200 items × 8 cities = 1600 entries, well within URL limits
+const CONCURRENCY   = 3;             // max simultaneous requests
+const REQ_DELAY_MS  = 80;            // ms delay between requests per worker to avoid 429
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,8 @@ async function withConcurrency(tasks, limit) {
   async function worker() {
     while (next < tasks.length) {
       const idx = next++;
+      // Stagger requests: delay before every request except the very first
+      if (idx > 0) await new Promise(r => setTimeout(r, REQ_DELAY_MS));
       results[idx] = await tasks[idx]();
     }
   }
@@ -36,12 +39,12 @@ async function withConcurrency(tasks, limit) {
 
 // ─── Internal fetch ───────────────────────────────────────────────────────────
 
-async function fetchChunk(url, retries = 2) {
+async function fetchChunk(url, retries = 3) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     const res = await fetch(url);
     if (res.ok) return res.json();
     if (res.status === 429 && attempt < retries) {
-      await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+      await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
       continue;
     }
     throw new Error(`HTTP ${res.status} ${res.statusText}`);
@@ -95,6 +98,7 @@ export async function fetchPrices(itemIds, cities, quality = 1) {
     .map(e => ({
       item_id:              e.item_id,
       city:                 e.city,
+      quality:              e.quality,
       sell_price_min:       e.sell_price_min,
       sell_price_min_date:  e.sell_price_min_date,
       buy_price_max:        e.buy_price_max,

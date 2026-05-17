@@ -2733,7 +2733,12 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
 .fc-foot .net.neg { background: var(--neg-bg); color: var(--neg-text); padding: 2px 7px; border-radius: 4px; display: inline-block; }
 .fc-no-price-msg { font-size: 11px; color: var(--text-tertiary); text-align: center; padding: 4px 0; }
 
-.pin-btn {
+.fc-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.pin-btn, .dismiss-btn {
   width: 28px; height: 28px;
   border: 0.5px solid var(--border);
   border-radius: 5px;
@@ -2745,6 +2750,12 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
   transition: background .12s, color .12s;
 }
 .pin-btn:hover { background: var(--accent-subtle-bg); color: var(--accent-subtle-tx); border-color: var(--accent-subtle-bd); }
+.dismiss-btn { font-size: 11px; }
+.dismiss-btn:hover { background: #fff0f0; color: #c0392b; border-color: #e8b4b4; }
+.dismiss-btn.active { background: #fff0f0; color: #c0392b; border-color: #e8b4b4; opacity: 1; }
+.flip-card.dismissed { opacity: 0.38; filter: grayscale(0.55); }
+.flip-card.dismissed:hover { opacity: 0.6; }
+.flip-card.fc-hidden { display: none; }
 
 /* ── Flip tooltip ───────────────────────────────────────────────── */
 .fc-foot.has-tooltip { position: relative; }
