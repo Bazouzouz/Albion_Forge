@@ -4,25 +4,48 @@
 
 import { allRawIds, allRefinedIds, T3_REFINED_IDS } from '../data/items.js';
 
-const API_BASE  = 'https://europe.albion-online-data.com/api/v2/stats/prices';
-const TTL_MS    = 5 * 60 * 1000; // 5-minute cache
-const CHUNK_SIZE = 50;            // keep URLs within browser limits
+const API_BASE      = 'https://europe.albion-online-data.com/api/v2/stats/prices';
+const API_HISTORY   = 'https://europe.albion-online-data.com/api/v2/stats/history';
+const TTL_MS        = 5 * 60 * 1000; // 5-minute cache
+const CHUNK_SIZE    = 100;            // items per request (URL stays well under limits)
+const CONCURRENCY   = 5;             // max simultaneous requests to avoid 429
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 
 const cache = new Map(); // key → { data, timestamp }
 
-function cacheKey(itemIds, cities) {
-  return [...itemIds].sort().join(',') + '|' + [...cities].sort().join(',');
+function cacheKey(itemIds, cities, quality = 1) {
+  return [...itemIds].sort().join(',') + '|' + [...cities].sort().join(',') + '|q' + quality;
+}
+
+// ─── Concurrency limiter ──────────────────────────────────────────────────────
+// Runs `tasks` (thunks returning promises) with at most `limit` in-flight at once.
+
+async function withConcurrency(tasks, limit) {
+  const results = new Array(tasks.length);
+  let next = 0;
+  async function worker() {
+    while (next < tasks.length) {
+      const idx = next++;
+      results[idx] = await tasks[idx]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return results;
 }
 
 // ─── Internal fetch ───────────────────────────────────────────────────────────
 
-async function fetchChunk(itemIds, cities) {
-  const url = `${API_BASE}/${itemIds.join(',')}?locations=${cities.join(',')}&qualities=1`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-  return res.json();
+async function fetchChunk(url, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(url);
+    if (res.ok) return res.json();
+    if (res.status === 429 && attempt < retries) {
+      await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+      continue;
+    }
+    throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -37,15 +60,14 @@ async function fetchChunk(itemIds, cities) {
  * @param {string[]} cities   e.g. ["Thetford", "Fort Sterling"]
  * @returns {Promise<Array<{ item_id, city, sell_price_min, sell_price_min_date }>>}
  */
-export async function fetchPrices(itemIds, cities) {
-  const key = cacheKey(itemIds, cities);
+export async function fetchPrices(itemIds, cities, quality = 1) {
+  const key = cacheKey(itemIds, cities, quality);
   const hit = cache.get(key);
 
   if (hit && Date.now() - hit.timestamp < TTL_MS) {
     return hit.data;
   }
 
-  // Split into chunks and fetch in parallel
   const chunks = [];
   for (let i = 0; i < itemIds.length; i += CHUNK_SIZE) {
     chunks.push(itemIds.slice(i, i + CHUNK_SIZE));
@@ -53,7 +75,10 @@ export async function fetchPrices(itemIds, cities) {
 
   let raw;
   try {
-    const results = await Promise.all(chunks.map(chunk => fetchChunk(chunk, cities)));
+    const tasks   = chunks.map(chunk => () => fetchChunk(
+      `${API_BASE}/${chunk.join(',')}?locations=${cities.join(',')}&qualities=${quality}`
+    ));
+    const results = await withConcurrency(tasks, CONCURRENCY);
     raw = results.flat();
   } catch (err) {
     if (hit) {
@@ -128,6 +153,55 @@ export function getDataAge(dateString) {
   if (diffMin < 60) return { label: diffMin <= 1 ? '1 min' : `${diffMin} min`, status: 'fresh' };
   if (diffH   < 24) return { label: `${diffH} h`,                              status: 'stale' };
   return               { label: `${diffD} d`,                                  status: 'old'   };
+}
+
+/**
+ * Fetches sales-history data for volume estimation.
+ * Returns a nested map: itemId → city → avgDailyVolume (items sold per day, quality-filtered).
+ *
+ * Uses time-scale=24 (daily buckets). Averages the last `days` data points.
+ *
+ * @param {string[]} itemIds
+ * @param {string[]} cities
+ * @param {number}   quality  1=Normal … 5=Masterpiece
+ * @param {number}   days     how many recent days to average (default 7)
+ * @returns {Promise<Map<string, Map<string, number>>>}
+ */
+export async function fetchHistory(itemIds, cities, quality = 1, days = 7) {
+  const key = `hist|${[...itemIds].sort().join(',')}|${[...cities].sort().join(',')}|q${quality}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.timestamp < TTL_MS) return hit.data;
+
+  const chunks = [];
+  for (let i = 0; i < itemIds.length; i += CHUNK_SIZE) {
+    chunks.push(itemIds.slice(i, i + CHUNK_SIZE));
+  }
+
+  let raw;
+  try {
+    const tasks   = chunks.map(chunk => () => fetchChunk(
+      `${API_HISTORY}/${chunk.join(',')}?locations=${cities.join(',')}&time-scale=24&qualities=${quality}`
+    ).catch(() => []));
+    const results = await withConcurrency(tasks, CONCURRENCY);
+    raw = results.flat();
+  } catch {
+    if (hit) return hit.data;
+    return new Map();
+  }
+
+  const data = new Map();
+  for (const entry of raw) {
+    if (entry.quality !== quality) continue;
+    const recentData = entry.data.slice(-days);
+    if (!recentData.length) continue;
+    const total = recentData.reduce((s, d) => s + d.item_count, 0);
+    const avg   = Math.round(total / recentData.length);
+    if (!data.has(entry.item_id)) data.set(entry.item_id, new Map());
+    data.get(entry.item_id).set(entry.location, avg);
+  }
+
+  cache.set(key, { data, timestamp: Date.now() });
+  return data;
 }
 
 /** Clears the in-memory cache (useful for a forced refresh). */

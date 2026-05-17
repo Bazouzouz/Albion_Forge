@@ -1,3 +1,7 @@
 node_modules/
 dist/
 .DS_Store
+.cache/
+.claude/
+src/ui/crafting.sidebar-backup.js
+mockups/items.txt

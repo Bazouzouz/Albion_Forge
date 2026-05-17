@@ -9,6 +9,7 @@ export const CITIES = [
   { id: 'Thetford',       label: 'Thetford',       region: 'swamp'     },
   { id: 'Caerleon',       label: 'Caerleon',       region: 'center'    },
   { id: 'Brecilien',      label: 'Brecilien',      region: 'forest'    },
+  { id: 'Black Market',   label: 'Black Market',   region: 'center'    },
 ];
 
 // City that grants a +15% refining return bonus for each resource type.

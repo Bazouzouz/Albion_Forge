@@ -28,6 +28,8 @@ import { initCatalogue }                           from './ui/catalogue.js';
 import { initTransmute }                           from './ui/transmute.js';
 import { initRefining }                            from './ui/refining.js';
 import { initOrders }                              from './ui/orders.js';
+import { initCrafting }                            from './ui/crafting.js';
+import { initFlip }                               from './ui/flip.js';
 
 // ── Navigation ────────────────────────────────────────────────────
 
@@ -38,6 +40,8 @@ let catalogueLoaded  = false;
 let transmuteLoaded  = false;
 let refiningLoaded   = false;
 let ordersLoaded     = false;
+let craftingLoaded   = false;
+let flipLoaded       = false;
 
 function showTab(name) {
   tabs.forEach(t => {
@@ -66,6 +70,19 @@ function showTab(name) {
   if (name === 'orders' && !ordersLoaded) {
     ordersLoaded = true;
     initOrders();
+  }
+
+  if (name === 'crafting' && !craftingLoaded) {
+    craftingLoaded = true;
+    // Ensure transmute + refining are loaded so Orders' craft bill has price data
+    if (!transmuteLoaded) { transmuteLoaded = true; initTransmute().catch(e => console.error('[transmute]', e)); }
+    if (!refiningLoaded)  { refiningLoaded  = true; initRefining().catch(e => console.error('[refining]', e)); }
+    initCrafting().catch(err => console.error('[crafting] init error:', err));
+  }
+
+  if (name === 'flip' && !flipLoaded) {
+    flipLoaded = true;
+    initFlip().catch(err => console.error('[flip] init error:', err));
   }
 }
 

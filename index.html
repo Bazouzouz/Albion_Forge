@@ -21,6 +21,12 @@
             <button class="nav-tab" data-tab="raffinage" role="tab" aria-selected="false">Refining</button>
           </li>
           <li>
+            <button class="nav-tab" data-tab="crafting" role="tab" aria-selected="false">Crafting</button>
+          </li>
+          <li>
+            <button class="nav-tab" data-tab="flip" role="tab" aria-selected="false">Flip</button>
+          </li>
+          <li>
             <button class="nav-tab" data-tab="orders" role="tab" aria-selected="false">Orders</button>
           </li>
           <li>
@@ -30,6 +36,7 @@
         <div class="nav-meta">
           <span class="dot stale" id="status-dot" title="Last updated"></span>
           <span class="muted" id="status-label">—</span>
+          <span class="nav-author">by Bazouzouz</span>
         </div>
       </div>
     </nav>
@@ -204,48 +211,65 @@
       </div><!-- /#app-raffinage -->
 
       <div id="app-orders" class="tab-view">
-        <div class="ord-body">
 
-          <!-- LEFT: orders list -->
-          <div class="cat-card">
-            <div class="ord-config-bar">
-              <span class="ord-config-title">Session orders</span>
-              <span class="ord-config-sub" id="ord-count">0 orders</span>
-              <button class="ord-refresh-btn" id="ord-refresh-btn" type="button">↻ Refresh prices</button>
-              <button class="ord-clear-btn" id="ord-clear-btn" type="button">Clear all</button>
-              <button class="ord-add-btn" id="ord-add-btn" type="button">+ Add order</button>
-            </div>
-            <div class="ord-orders-list" id="ord-orders-list">
-              <div class="ord-empty">No orders yet<div class="ord-empty-hint">Click <strong>+ Add order</strong> to add items</div></div>
-            </div>
-          </div>
+        <!-- Segmented control: Refining / Crafting / Flip session -->
+        <div class="ord-section-bar" id="ord-section-bar">
+          <button class="ord-section-btn on" data-section="refining" type="button">Refining session</button>
+          <button class="ord-section-btn" data-section="craft" type="button">Crafting session</button>
+          <button class="ord-section-btn" data-section="flip" type="button">Flip session</button>
+        </div>
 
-          <!-- RIGHT: bill -->
-          <div class="cat-card">
-            <div class="bill-section">
-              <div class="bill-title">📋 Shopping bill</div>
-              <div id="ord-bill-buy"><div class="bill-empty">— No items to buy —</div></div>
-            </div>
-            <div class="bill-section">
-              <div class="bill-title">🔄 Transmutations</div>
-              <div id="ord-bill-transmute"><div class="bill-empty">— No transmutes —</div></div>
-            </div>
-            <div class="bill-section">
-              <div class="bill-title">🔥 Refining recipes</div>
-              <div id="ord-bill-refine"><div class="bill-empty">— No recipes —</div></div>
-            </div>
-            <div class="bill-section">
-              <div class="bill-title">💎 City Hearts</div>
-              <div id="ord-bill-hearts"><div class="bill-empty">— No hearts needed —</div></div>
-            </div>
-            <div class="bill-section">
-              <div class="bill-title">⚡ Focus Cost</div>
-              <div id="ord-bill-focus"><div class="bill-empty">— No focus used —</div></div>
-            </div>
-            <div class="totals" id="ord-totals"></div>
-          </div>
+        <!-- Craft session (existing content) -->
+        <div id="ord-craft-section">
+          <div class="ord-body">
 
-        </div><!-- /.ord-body -->
+            <!-- LEFT: orders list -->
+            <div class="cat-card">
+              <div class="ord-config-bar">
+                <span class="ord-config-title">Session orders</span>
+                <span class="ord-config-sub" id="ord-count">0 orders</span>
+                <button class="ord-refresh-btn" id="ord-refresh-btn" type="button">↻ Refresh prices</button>
+                <button class="ord-clear-btn" id="ord-clear-btn" type="button">Clear all</button>
+                <button class="ord-add-btn" id="ord-add-btn" type="button">+ Add order</button>
+              </div>
+              <div class="ord-orders-list" id="ord-orders-list">
+                <div class="ord-empty">No orders yet<div class="ord-empty-hint">Click <strong>+ Add order</strong> to add items</div></div>
+              </div>
+            </div>
+
+            <!-- RIGHT: bill -->
+            <div class="cat-card">
+              <div class="bill-section">
+                <div class="bill-title">📋 Shopping bill</div>
+                <div id="ord-bill-buy"><div class="bill-empty">— No items to buy —</div></div>
+              </div>
+              <div class="bill-section">
+                <div class="bill-title">🔄 Transmutations</div>
+                <div id="ord-bill-transmute"><div class="bill-empty">— No transmutes —</div></div>
+              </div>
+              <div class="bill-section">
+                <div class="bill-title">🔥 Refining recipes</div>
+                <div id="ord-bill-refine"><div class="bill-empty">— No recipes —</div></div>
+              </div>
+              <div class="bill-section">
+                <div class="bill-title">💎 City Hearts</div>
+                <div id="ord-bill-hearts"><div class="bill-empty">— No hearts needed —</div></div>
+              </div>
+              <div class="bill-section">
+                <div class="bill-title">⚡ Focus Cost</div>
+                <div id="ord-bill-focus"><div class="bill-empty">— No focus used —</div></div>
+              </div>
+              <div class="totals" id="ord-totals"></div>
+            </div>
+
+          </div><!-- /.ord-body -->
+        </div><!-- /#ord-craft-section -->
+
+        <!-- Crafting session (new) -->
+        <div id="ord-crafting-section" hidden></div><!-- /#ord-crafting-section -->
+
+        <!-- Flip session (new) -->
+        <div id="ord-flip-section" hidden></div><!-- /#ord-flip-section -->
 
         <!-- Add / Edit order modal -->
         <div class="modal-overlay" id="ord-modal-overlay">
@@ -435,6 +459,231 @@
         </div><!-- /.cat-body -->
       </div><!-- /#app-catalogue -->
 
+      <div id="app-crafting" class="tab-view">
+        <div class="cft-card">
+
+          <!-- Sticky header: toolbar + picker -->
+          <div class="cft-header">
+          <div class="cft-toolbar">
+
+            <div class="toggle-group">
+              <label for="cft-tier">Tier</label>
+              <select class="cft-tier-select t7" id="cft-tier">
+                <option value="4">T4</option>
+                <option value="5">T5</option>
+                <option value="6">T6</option>
+                <option value="7" selected>T7</option>
+                <option value="8">T8</option>
+              </select>
+            </div>
+
+            <div class="rfn-sep"></div>
+
+            <div class="toggle-group">
+              <label for="cft-city">Sell city</label>
+              <select class="rfn-city-select" id="cft-city">
+                <option value="Thetford">Thetford</option>
+                <option value="Bridgewatch">Bridgewatch</option>
+                <option value="Fort Sterling">Fort Sterling</option>
+                <option value="Lymhurst">Lymhurst</option>
+                <option value="Martlock">Martlock</option>
+                <option value="Caerleon" selected>Caerleon</option>
+                <option value="Brecilien">Brecilien</option>
+                <option value="Black Market">Black Market</option>
+              </select>
+            </div>
+
+            <div class="toggle-group">
+              <label for="cft-quality">Quality</label>
+              <select class="rfn-city-select" id="cft-quality">
+                <option value="1" selected>Normal</option>
+                <option value="2">Good</option>
+                <option value="3">Outstanding</option>
+                <option value="4">Excellent</option>
+                <option value="5">Masterpiece</option>
+              </select>
+            </div>
+
+            <!-- RSS / Artifact buy-city selectors — populated dynamically by JS -->
+            <div id="cft-rss-cities-wrap" style="display:contents;"></div>
+
+            <div class="rfn-sep"></div>
+
+            <div class="toggle-group">
+              <label>Focus</label>
+              <div class="toggle-row">
+                <span class="toggle-state on" id="cft-focus-state-off">OFF</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="cft-focus-toggle" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-state" id="cft-focus-state-on">ON</span>
+                <span class="muted" style="font-size:11px;margin-left:6px">CRR: <strong id="cft-crr-display">—</strong></span>
+              </div>
+            </div>
+
+            <div class="toggle-group">
+              <label for="cft-crr-nofocus">CRR no focus (%)</label>
+              <input class="rfn-num-input" type="number" id="cft-crr-nofocus" min="0" max="100" step="0.1" value="15.2" style="width:58px" />
+            </div>
+
+            <div class="toggle-group">
+              <label for="cft-crr-focus">CRR focus (%)</label>
+              <input class="rfn-num-input" type="number" id="cft-crr-focus" min="0" max="100" step="0.1" value="36.9" style="width:58px" />
+            </div>
+
+            <div class="toggle-group">
+              <label for="cft-tax">Tax (%)</label>
+              <input class="rfn-num-input" type="number" id="cft-tax" min="0" max="100" step="0.1" value="3" style="width:44px" />
+            </div>
+
+            <button class="rfn-refresh-btn" id="cft-refresh-btn" type="button">↻ Refresh</button>
+          </div>
+
+          <!-- 3-level pill picker -->
+          <div class="cft-picker">
+            <div class="cft-picker-row cft-picker-station"  id="cft-pick-station"></div>
+            <div class="cft-picker-row cft-picker-category" id="cft-pick-category"></div>
+            <div class="cft-picker-row cft-picker-family"   id="cft-pick-family"></div>
+          </div>
+          </div><!-- /.cft-header -->
+
+          <!-- Main content -->
+          <div class="cft-main">
+
+              <!-- Recommended city tag -->
+              <div class="cft-main-header">
+                <div class="cft-recommended-tag" id="cft-recommended-tag" style="display:none">
+                  <span>★</span>
+                  <span id="cft-recommended-text"></span>
+                </div>
+              </div>
+
+              <!-- Legend -->
+              <div class="cft-legend">
+                <span class="cft-legend-label">Enchant:</span>
+                <div class="cft-legend-item"><div class="cft-legend-chip e0"></div>.0 Normal</div>
+                <div class="cft-legend-item"><div class="cft-legend-chip e1"></div>.1 Uncommon</div>
+                <div class="cft-legend-item"><div class="cft-legend-chip e2"></div>.2 Rare</div>
+                <div class="cft-legend-item"><div class="cft-legend-chip e3"></div>.3 Exceptional</div>
+                <div class="cft-legend-item"><div class="cft-legend-chip e4"></div>.4 Pristine</div>
+                <span style="margin-left:auto;font-size:11px;color:var(--text-tertiary)">
+                  <span class="cft-artifact-badge-sm">ARTIFACT</span> = editable artifact cost column
+                </span>
+              </div>
+
+              <!-- Table: Item | Artifact cost | .0 | .1 | .2 | .3 | .4 -->
+              <div class="cft-table-wrap">
+                <table class="cft-table">
+                  <thead>
+                    <tr>
+                      <th class="cft-th-item">Item</th>
+                      <th class="cft-th-artifact">Artifact cost</th>
+                      <th class="cft-th-ench e0">.0 Normal</th>
+                      <th class="cft-th-ench e1">.1 Uncommon</th>
+                      <th class="cft-th-ench e2">.2 Rare</th>
+                      <th class="cft-th-ench e3">.3 Exceptional</th>
+                      <th class="cft-th-ench e4">.4 Pristine</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cft-tbody"></tbody>
+                </table>
+              </div>
+
+            </div><!-- /.cft-main -->
+
+        </div><!-- /.cft-card -->
+
+        <!-- Add to Orders modal (singleton, opens from + Add button) -->
+        <div class="modal-overlay" id="cft-pin-modal-overlay">
+          <div class="modal cft-pin-modal">
+            <h3 id="cft-pin-title">Add to Orders</h3>
+
+            <div class="modal-row">
+              <label>Enchant</label>
+              <div class="tier-grid" id="cft-pin-enchants">
+                <div class="tier-btn on" data-e="0">.0</div>
+                <div class="tier-btn" data-e="1">.1</div>
+                <div class="tier-btn" data-e="2">.2</div>
+                <div class="tier-btn" data-e="3">.3</div>
+                <div class="tier-btn" data-e="4">.4</div>
+              </div>
+            </div>
+
+            <div class="modal-row">
+              <label>Qty to craft</label>
+              <input type="number" id="cft-pin-qty" min="1" value="1" />
+            </div>
+
+            <div class="modal-row">
+              <label>Use focus</label>
+              <div class="toggle-row">
+                <span class="toggle-state on" id="cft-pin-focus-off">OFF</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="cft-pin-focus" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-state" id="cft-pin-focus-on">ON</span>
+                <span class="muted has-tooltip cft-pin-crr-wrap" style="font-size:11px;margin-left:6px">CRR: <strong id="cft-pin-crr">—</strong><span class="tooltip" id="cft-pin-tt-crr"></span></span>
+              </div>
+            </div>
+
+            <div class="modal-row" id="cft-pin-r1-row">
+              <label><span id="cft-pin-r1-label">Resource 1 /u</span><span class="has-tooltip cft-pin-lbl-tt">ⓘ<span class="tooltip" id="cft-pin-tt-r1"></span></span></label>
+              <input type="number" id="cft-pin-r1-price" min="0" step="100" />
+            </div>
+
+            <div class="modal-row" id="cft-pin-r2-row" hidden>
+              <label><span id="cft-pin-r2-label">Resource 2 /u</span><span class="has-tooltip cft-pin-lbl-tt">ⓘ<span class="tooltip" id="cft-pin-tt-r2"></span></span></label>
+              <input type="number" id="cft-pin-r2-price" min="0" step="100" />
+            </div>
+
+            <div class="modal-row" id="cft-pin-art-row" hidden>
+              <label><span>Artifact /u</span><span class="has-tooltip cft-pin-lbl-tt">ⓘ<span class="tooltip" id="cft-pin-tt-art"></span></span></label>
+              <input type="number" id="cft-pin-art-price" min="0" step="100" />
+            </div>
+
+            <div class="modal-row">
+              <label>Sell price</label>
+              <input type="number" id="cft-pin-sell" min="0" step="100" />
+            </div>
+
+            <div class="modal-row">
+              <label>Sell quality</label>
+              <select id="cft-pin-quality">
+                <option value="1">Normal</option>
+                <option value="2">Good</option>
+                <option value="3">Outstanding</option>
+                <option value="4">Excellent</option>
+                <option value="5">Masterpiece</option>
+              </select>
+            </div>
+
+            <div class="modal-row">
+              <label>Tax (%)</label>
+              <input type="number" id="cft-pin-tax" min="0" max="100" step="0.1" />
+            </div>
+
+            <div class="cft-pin-recap">
+              <div class="cft-pin-recap-row has-tooltip"><span>Cost /u</span><span id="cft-pin-cost">—</span><span class="tooltip" id="cft-pin-tt-cost"></span></div>
+              <div class="cft-pin-recap-row has-tooltip"><span>Revenue /u</span><span id="cft-pin-revenue">—</span><span class="tooltip" id="cft-pin-tt-revenue"></span></div>
+              <div class="cft-pin-recap-row has-tooltip"><span>Net /u</span><span id="cft-pin-net">—</span><span class="tooltip" id="cft-pin-tt-net"></span></div>
+              <div class="cft-pin-recap-row has-tooltip"><span>ROI</span><span id="cft-pin-roi">—</span><span class="tooltip" id="cft-pin-tt-roi"></span></div>
+              <div class="cft-pin-recap-row bold has-tooltip"><span>Total cost</span><span id="cft-pin-total-cost">—</span><span class="tooltip" id="cft-pin-tt-total-cost"></span></div>
+              <div class="cft-pin-recap-row bold has-tooltip"><span>Total net</span><span id="cft-pin-net-total">—</span><span class="tooltip" id="cft-pin-tt-net-total"></span></div>
+            </div>
+
+            <div class="modal-actions">
+              <button class="btn-secondary" id="cft-pin-cancel" type="button">Cancel</button>
+              <button class="btn-primary" id="cft-pin-submit" type="button" disabled>Add to Orders</button>
+            </div>
+          </div>
+        </div><!-- /#cft-pin-modal-overlay -->
+
+      </div><!-- /#app-crafting -->
+
+      <div id="app-flip" class="tab-view"></div><!-- /#app-flip -->
+
     </main>
 
     <!-- ── Footer ── -->
@@ -442,6 +691,7 @@
       <span>albionforge</span>
       <span class="muted">·</span>
       <span class="muted">data via Albion Online Data Project</span>
+      <span class="footer-discord">Discord : @bazouzouz</span>
     </footer>
 
     <script type="module" src="./src/main.js"></script>
