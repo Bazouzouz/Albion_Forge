@@ -191,7 +191,7 @@ export async function fetchHistory(itemIds, cities, quality = 1, days = 7) {
 
   const data = new Map();
   for (const entry of raw) {
-    if (entry.quality !== quality) continue;
+    if (quality !== 0 && entry.quality !== quality) continue;
     const recentData = entry.data.slice(-days);
     if (!recentData.length) continue;
     const total = recentData.reduce((s, d) => s + d.item_count, 0);

@@ -14,7 +14,7 @@ const ALL_TIERS   = [4, 5, 6, 7, 8];
 const ALL_ENCHANTS = [0, 1, 2, 3, 4];
 const RENDER_BASE  = 'https://render.albiononline.com/v1/item';
 
-const QUALITY_NAMES = { 1: 'Normal', 2: 'Good', 3: 'Outstanding', 4: 'Excellent', 5: 'Masterpiece' };
+const QUALITY_NAMES = { 0: 'All qualities', 1: 'Normal', 2: 'Good', 3: 'Outstanding', 4: 'Excellent', 5: 'Masterpiece' };
 
 const CATEGORY_INFO = {
   weapons: { label: 'Weapons', emoji: '⚔' },
@@ -142,7 +142,7 @@ function buildToolbar() {
   <div class="flip-tg">
     <label>Quality</label>
     <select id="flip-quality" class="flip-select" style="min-width:108px;">
-      ${[1,2,3,4,5].map(q => `<option value="${q}" ${q === state.quality ? 'selected' : ''}>${QUALITY_NAMES[q]}</option>`).join('')}
+      ${[0,1,2,3,4,5].map(q => `<option value="${q}" ${q === state.quality ? 'selected' : ''}>${QUALITY_NAMES[q]}</option>`).join('')}
     </select>
   </div>
 
