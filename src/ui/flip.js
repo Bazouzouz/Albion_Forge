@@ -119,6 +119,21 @@ function ageClass(date) {
   return 'old';
 }
 
+function formatVol(n) {
+  if (n == null || n === 0) return '—';
+  if (n >= 10000) return `${Math.round(n / 1000)}k`;
+  if (n >= 1000)  return `${(n / 1000).toFixed(1)}k`;
+  return String(Math.round(n));
+}
+
+function volTier(buyVol, sellVol) {
+  if (buyVol == null || sellVol == null) return 'low';
+  const minVol = Math.min(buyVol, sellVol);
+  if (minVol >= 10) return 'good';
+  if (minVol >= 3)  return 'ok';
+  return 'low';
+}
+
 // ── Toolbar HTML ─────────────────────────────────────────────────────────────
 
 function buildToolbar() {
@@ -281,8 +296,11 @@ function renderCard(item) {
   const isDismissed = dismissed.has(cardKey);
   const isStale     = freshness === 'stale';
 
-  const buyVolHtml  = buyVol  != null ? `<span class="vol-icon">📦</span>${buyVol}/day`  : `<span class="vol-icon">📦</span>—`;
-  const sellVolHtml = sellVol != null ? `<span class="vol-icon">📈</span>${sellVol}/day` : `<span class="vol-icon">📈</span>—`;
+  const volTitle = [
+    'Volume moyen quotidien sur 7 jours',
+    `Acheté à ${pair.buyCity}: ${buyVol != null ? buyVol + '/j' : 'pas de données'}`,
+    `Vendu à ${pair.sellCity}: ${sellVol != null ? sellVol + '/j' : 'pas de données'}`,
+  ].join('\n');
 
   const tooltip = `
 <div class="tooltip">
@@ -313,8 +331,11 @@ function renderCard(item) {
       <div class="fc-name">${name}</div>
       <div class="fc-meta">T${tier} <span class="ench-tag e${enchant}">.${enchant}</span> · ${QUALITY_NAMES[quality]}</div>
     </div>
-    <span class="roi-badge ${roiClass}">${pair.roiPct >= 0 ? '+' : ''}${pair.roiPct.toFixed(1)}%</span>
-    ${isStale ? `<span class="fc-stale-chip" title="Last seen ${ageLabel(Math.max(buyAgeMin, sellAgeMin))} ago — order may have been filled">⚠ stale</span>` : ''}
+    <div class="fc-badges">
+      <span class="roi-badge ${roiClass}">${pair.roiPct >= 0 ? '+' : ''}${pair.roiPct.toFixed(1)}%</span>
+      ${isStale ? `<span class="fc-stale-chip" title="Last seen ${ageLabel(Math.max(buyAgeMin, sellAgeMin))} ago — order may have been filled">⚠ stale</span>` : ''}
+      <span class="fc-volume fc-volume--${volTier(buyVol, sellVol)}" title="${volTitle}">📦 ${formatVol(buyVol)} / ${formatVol(sellVol)}</span>
+    </div>
   </div>
 
   <div class="fc-route">
@@ -339,12 +360,10 @@ function renderCard(item) {
     <div class="price-block">
       <div class="lbl">Buy price</div>
       <div class="val">${fmt(pair.buy)}</div>
-      <div class="vol">${buyVolHtml}</div>
     </div>
     <div class="price-block">
       <div class="lbl">Sell price</div>
       <input type="number" class="fc-sell-input" value="${pair.sell}" min="0" step="100" />
-      <div class="vol">${sellVolHtml}</div>
     </div>
   </div>
 
