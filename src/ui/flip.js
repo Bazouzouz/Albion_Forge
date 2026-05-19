@@ -2,8 +2,8 @@
 
 import { CITIES }               from '../data/cities.js';
 import { FLIP_ITEMS }           from '../data/flipItems.js';
-import { fetchPrices, fetchHistory, clearCache } from '../api/albionApi.js';
-import { buildFlipList }        from '../logic/flip.js';
+import { fetchPrices, fetchHistory } from '../api/albionApi.js';
+import { buildFlipList, assessFreshness } from '../logic/flip.js';
 import { addPin }               from '../logic/flipSession.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -49,7 +49,8 @@ const state = {
   taxPct:         4,
   minRoi:         8,
   minNet:         0,
-  maxAgeMin:      180,
+  maxBuyAge:      60,
+  maxSellAge:     90,
   showNoPrice:    false,
   hideDismissed:  false,
 };
@@ -99,6 +100,22 @@ function ageStatus(min) {
   if (!isFinite(min)) return 'old';
   if (min < 60)  return 'fresh';
   if (min < 360) return 'stale';
+  return 'old';
+}
+
+function formatAge(date) {
+  if (!date) return '?';
+  const min = Math.floor((Date.now() - date.getTime()) / 60_000);
+  if (min < 60)   return `${min}m`;
+  if (min < 1440) return `${Math.floor(min / 60)}h`;
+  return `${Math.floor(min / 1440)}d`;
+}
+
+function ageClass(date) {
+  if (!date) return 'old';
+  const min = (Date.now() - date.getTime()) / 60_000;
+  if (min <= 30) return 'fresh';
+  if (min <= 90) return '';
   return 'old';
 }
 
@@ -183,8 +200,13 @@ function buildToolbar() {
   </div>
 
   <div class="flip-tg">
-    <label>Max age (min)</label>
-    <input id="flip-max-age" class="flip-num" type="number" value="${state.maxAgeMin}" min="0" title="0 = no limit" />
+    <label>Max buy age</label>
+    <input id="flip-max-buy-age" class="flip-num" type="number" value="${state.maxBuyAge}" min="0" title="0 = no limit (minutes)" />
+  </div>
+
+  <div class="flip-tg">
+    <label>Max sell age</label>
+    <input id="flip-max-sell-age" class="flip-num" type="number" value="${state.maxSellAge}" min="0" title="0 = no limit (minutes)" />
   </div>
 
   <div class="flip-sep"></div>
@@ -252,12 +274,12 @@ function renderCard(item) {
 </div>`;
   }
 
-  const maxAge      = Math.max(buyAgeMin, sellAgeMin);
-  const isStale     = isFinite(maxAge) && maxAge > 60;
+  const freshness   = assessFreshness({ buyDate: pair.buyDate, sellDate: pair.sellDate });
   const roiClass    = roiBadgeClass(pair.roiPct);
   const netClass    = pair.net > 0 ? 'pos' : 'neg';
   const cardKey     = itemId + '_q' + quality;
   const isDismissed = dismissed.has(cardKey);
+  const isStale     = freshness === 'stale';
 
   const buyVolHtml  = buyVol  != null ? `<span class="vol-icon">📦</span>${buyVol}/day`  : `<span class="vol-icon">📦</span>—`;
   const sellVolHtml = sellVol != null ? `<span class="vol-icon">📈</span>${sellVol}/day` : `<span class="vol-icon">📈</span>—`;
@@ -292,17 +314,24 @@ function renderCard(item) {
       <div class="fc-meta">T${tier} <span class="ench-tag e${enchant}">.${enchant}</span> · ${QUALITY_NAMES[quality]}</div>
     </div>
     <span class="roi-badge ${roiClass}">${pair.roiPct >= 0 ? '+' : ''}${pair.roiPct.toFixed(1)}%</span>
+    ${isStale ? `<span class="fc-stale-chip" title="Last seen ${ageLabel(Math.max(buyAgeMin, sellAgeMin))} ago — order may have been filled">⚠ stale</span>` : ''}
   </div>
 
   <div class="fc-route">
     <div class="route-side">
       <div class="route-label">Buy</div>
-      ${cityTag(pair.buyCity)}
+      <div class="route-city-row">
+        ${cityTag(pair.buyCity)}
+        <span class="fc-age ${ageClass(pair.buyDate)}">${formatAge(pair.buyDate)}</span>
+      </div>
     </div>
     <span class="route-arrow">→</span>
     <div class="route-side r">
       <div class="route-label">Sell</div>
-      ${cityTag(pair.sellCity)}
+      <div class="route-city-row r">
+        <span class="fc-age ${ageClass(pair.sellDate)}">${formatAge(pair.sellDate)}</span>
+        ${cityTag(pair.sellCity)}
+      </div>
     </div>
   </div>
 
@@ -352,7 +381,8 @@ function render() {
     categories:  state.categories,
     minRoi:      state.minRoi,
     minNet:      state.minNet,
-    maxAgeMin:   state.maxAgeMin,
+    maxBuyAge:   state.maxBuyAge,
+    maxSellAge:  state.maxSellAge,
     showNoPrice: state.showNoPrice,
   };
 
@@ -414,8 +444,6 @@ async function doRefresh() {
   if (mosaic) mosaic.innerHTML = '<div class="flip-empty">Loading prices…</div>';
 
   try {
-    clearCache();
-
     // Build item IDs for current filter selection
     const selectedItems = FLIP_ITEMS.filter(i =>
       state.tiers.includes(i.tier) &&
@@ -424,8 +452,8 @@ async function doRefresh() {
     );
     const itemIds = [...new Set(selectedItems.map(i => i.itemId))];
 
-    // Fetch prices across all cities
-    const flat = await fetchPrices(itemIds, SELL_CITIES, state.quality);
+    // Fetch prices across all cities — bypass cache so Refresh always gets fresh data
+    const flat = await fetchPrices(itemIds, SELL_CITIES, state.quality, { bypassCache: true });
 
     // Build priceMap(s): itemId → Map<city, entry>
     priceMap = new Map();
@@ -455,8 +483,8 @@ async function doRefresh() {
 
     render();
 
-    // Background: fetch volume history
-    fetchHistory(itemIds, SELL_CITIES, state.quality).then(hist => {
+    // Background: fetch volume history — also bypass cache on manual Refresh
+    fetchHistory(itemIds, SELL_CITIES, state.quality, 7, { bypassCache: true }).then(hist => {
       volumeMap = hist;
       render(); // re-render with volume data
     }).catch(() => {});
@@ -524,10 +552,11 @@ function wireEvents(root) {
 
   // Numeric inputs (re-render on change)
   const numMap = {
-    '#flip-tax':     v => { state.taxPct  = v; render(); },
-    '#flip-min-roi': v => { state.minRoi  = v; render(); },
-    '#flip-min-net': v => { state.minNet  = v; render(); },
-    '#flip-max-age': v => { state.maxAgeMin = v; render(); },
+    '#flip-tax':          v => { state.taxPct   = v; render(); },
+    '#flip-min-roi':      v => { state.minRoi   = v; render(); },
+    '#flip-min-net':      v => { state.minNet   = v; render(); },
+    '#flip-max-buy-age':  v => { state.maxBuyAge  = v; localStorage.setItem('flip.maxBuyAge',  v); render(); },
+    '#flip-max-sell-age': v => { state.maxSellAge = v; localStorage.setItem('flip.maxSellAge', v); render(); },
   };
   for (const [id, fn] of Object.entries(numMap)) {
     root.querySelector(id)?.addEventListener('input', e => fn(Number(e.target.value) || 0));
@@ -637,6 +666,8 @@ function wireEvents(root) {
       sellCity:   pair.sellCity,
       buyPrice:   pair.buy,
       sellPrice:  pair.sell,
+      buyDate:    pair.buyDate  ? pair.buyDate.toISOString()  : null,
+      sellDate:   pair.sellDate ? pair.sellDate.toISOString() : null,
       qty,
       taxPct:     state.taxPct,
       sellMode:   state.sellMode,
@@ -656,6 +687,19 @@ function wireEvents(root) {
 export async function initFlip() {
   const root = document.getElementById('app-flip');
   if (!root) return;
+
+  // Migrate old single maxAgeMin to separate buy/sell ages
+  const oldAge = localStorage.getItem('flip.maxAgeMin');
+  if (oldAge !== null) {
+    localStorage.setItem('flip.maxBuyAge', oldAge);
+    localStorage.setItem('flip.maxSellAge', oldAge);
+    localStorage.removeItem('flip.maxAgeMin');
+  }
+  // Load persisted age filters
+  const savedBuyAge  = localStorage.getItem('flip.maxBuyAge');
+  const savedSellAge = localStorage.getItem('flip.maxSellAge');
+  if (savedBuyAge  !== null) state.maxBuyAge  = Number(savedBuyAge);
+  if (savedSellAge !== null) state.maxSellAge = Number(savedSellAge);
 
   root.innerHTML = `
 <div class="flip-card-wrap">

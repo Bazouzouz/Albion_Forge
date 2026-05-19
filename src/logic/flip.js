@@ -65,19 +65,33 @@ export function bestPair(pricesByCity, buyCities, sellCities, sellMode, taxPct) 
 }
 
 /**
- * Build the complete sorted list of flip opportunities.
+ * Assess data freshness for a flip opportunity.
+ * - fresh: oldest of the two dates ≤ 30 min
+ * - aging: oldest between 30 and 120 min
+ * - stale: oldest > 120 min, OR buyDate > 60 min AND gap between the two dates > 4 h
  *
- * @param {Array<{itemId,name,category,tier,enchant}>} items
- * @param {Map<string, Map<string, object>>} priceMap   itemId → city → priceEntry
- * @param {Map<string, Map<string, number>>} volumeMap  itemId → city → avgDailyVolume
- * @param {object} filters
- * @returns {Array}
+ * @param {{ buyDate: Date|null, sellDate: Date|null, now?: number }} params
+ * @returns {'fresh'|'aging'|'stale'}
  */
+export function assessFreshness({ buyDate, sellDate, now = Date.now() }) {
+  const buyAge  = buyDate  ? (now - buyDate.getTime())  / 60_000 : Infinity;
+  const sellAge = sellDate ? (now - sellDate.getTime()) / 60_000 : Infinity;
+  const oldest  = Math.max(buyAge, sellAge);
+
+  if (oldest <= 30) return 'fresh';
+  if (oldest > 120) return 'stale';
+  const gap = (buyDate && sellDate)
+    ? Math.abs(buyDate.getTime() - sellDate.getTime()) / 60_000
+    : 0;
+  if (buyAge > 60 && gap > 240) return 'stale';
+  return 'aging';
+}
+
 export function buildFlipList(items, priceMap, volumeMap, filters) {
   const {
     buyCities, sellCities, sellMode, taxPct,
     tiers, enchants, categories,
-    minRoi, minNet, maxAgeMin, showNoPrice,
+    minRoi, minNet, maxBuyAge, maxSellAge, showNoPrice,
   } = filters;
 
   const valid   = [];
@@ -103,13 +117,13 @@ export function buildFlipList(items, priceMap, volumeMap, filters) {
     }
 
     const now        = Date.now();
-    const buyAgeMin  = pair.buyDate  ? Math.floor((now - new Date(pair.buyDate ).getTime()) / 60_000) : Infinity;
-    const sellAgeMin = pair.sellDate ? Math.floor((now - new Date(pair.sellDate).getTime()) / 60_000) : Infinity;
-    const maxDataAge = Math.max(buyAgeMin, sellAgeMin);
+    const buyAgeMin  = pair.buyDate  ? Math.floor((now - pair.buyDate.getTime())  / 60_000) : Infinity;
+    const sellAgeMin = pair.sellDate ? Math.floor((now - pair.sellDate.getTime()) / 60_000) : Infinity;
 
-    if (pair.net     < minNet)                       continue;
-    if (pair.roiPct  < minRoi)                       continue;
-    if (maxAgeMin > 0 && maxDataAge > maxAgeMin)     continue;
+    if (pair.net    < minNet)                            continue;
+    if (pair.roiPct < minRoi)                            continue;
+    if (maxBuyAge  > 0 && buyAgeMin  > maxBuyAge)        continue;
+    if (maxSellAge > 0 && sellAgeMin > maxSellAge)       continue;
 
     const buyVol  = volumeMap?.get(item.itemId)?.get(pair.buyCity);
     const sellVol = volumeMap?.get(item.itemId)?.get(pair.sellCity);

@@ -2690,6 +2690,21 @@ input, select { font-family: inherit; color: var(--text-primary); background: va
 .flip-city-tag.brecilien   { background: #183028; color: #5ab890; }
 .flip-city-tag.blackmarket { background: #1a1a18; color: #E8C95F; border: 0.5px solid #3a3820; }
 
+/* Age badges inside route block */
+.route-city-row   { display: flex; align-items: center; gap: 4px; }
+.route-city-row.r { justify-content: flex-end; }
+
+.fc-age       { font-size: 10px; padding: 0 4px; border-radius: 3px; opacity: 0.85; font-family: var(--font-mono); color: var(--text-tertiary); }
+.fc-age.fresh { color: var(--af-success, #4ade80); }
+.fc-age.old   { color: #fb923c; }
+
+/* Stale chip */
+.fc-stale-chip {
+  font-size: 10px; padding: 1px 5px; border-radius: 3px;
+  background: rgba(251,146,60,0.15); color: #fb923c;
+  cursor: help; flex-shrink: 0;
+}
+
 /* Price blocks */
 .fc-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .price-block {

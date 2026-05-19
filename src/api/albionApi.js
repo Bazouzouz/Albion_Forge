@@ -11,6 +11,14 @@ const CHUNK_SIZE    = 200;            // items per request — 200 items × 8 ci
 const CONCURRENCY   = 3;             // max simultaneous requests
 const REQ_DELAY_MS  = 80;            // ms delay between requests per worker to avoid 429
 
+// ─── Date parsing ────────────────────────────────────────────────────────────
+
+// Albion API returns "0001-01-01T00:00:00" as sentinel when a price field has no data.
+function parseDate(str) {
+  if (!str || str.startsWith('0001-01-01')) return null;
+  return new Date(str);
+}
+
 // ─── Cache ────────────────────────────────────────────────────────────────────
 
 const cache = new Map(); // key → { data, timestamp }
@@ -61,13 +69,14 @@ async function fetchChunk(url, retries = 3) {
  *
  * @param {string[]} itemIds  e.g. ["T4_ORE", "T4_ORE_LEVEL1@1"]
  * @param {string[]} cities   e.g. ["Thetford", "Fort Sterling"]
- * @returns {Promise<Array<{ item_id, city, sell_price_min, sell_price_min_date }>>}
+ * @param {{ bypassCache?: boolean }} [opts]
+ * @returns {Promise<Array<{ item_id, city, sell_price_min, sell_price_min_date, sell_price_max, sell_price_max_date, buy_price_min, buy_price_min_date, buy_price_max, buy_price_max_date }>>}
  */
-export async function fetchPrices(itemIds, cities, quality = 1) {
+export async function fetchPrices(itemIds, cities, quality = 1, { bypassCache = false } = {}) {
   const key = cacheKey(itemIds, cities, quality);
   const hit = cache.get(key);
 
-  if (hit && Date.now() - hit.timestamp < TTL_MS) {
+  if (!bypassCache && hit && Date.now() - hit.timestamp < TTL_MS) {
     return hit.data;
   }
 
@@ -100,9 +109,13 @@ export async function fetchPrices(itemIds, cities, quality = 1) {
       city:                 e.city,
       quality:              e.quality,
       sell_price_min:       e.sell_price_min,
-      sell_price_min_date:  e.sell_price_min_date,
+      sell_price_min_date:  parseDate(e.sell_price_min_date),
+      sell_price_max:       e.sell_price_max,
+      sell_price_max_date:  parseDate(e.sell_price_max_date),
+      buy_price_min:        e.buy_price_min,
+      buy_price_min_date:   parseDate(e.buy_price_min_date),
       buy_price_max:        e.buy_price_max,
-      buy_price_max_date:   e.buy_price_max_date,
+      buy_price_max_date:   parseDate(e.buy_price_max_date),
     }));
 
   cache.set(key, { data, timestamp: Date.now() });
@@ -115,23 +128,30 @@ export async function fetchPrices(itemIds, cities, quality = 1) {
  *
  * @param {'ORE'|'WOOD'|'FIBER'|'HIDE'} resourceType
  * @param {string[]} cities
- * @returns {Promise<Record<string, Record<string, { sell_price_min: number, sell_price_min_date: string }>>>}
+ * @param {{ bypassCache?: boolean }} [opts]
+ * @returns {Promise<Record<string, Record<string, object>>>}
  */
-export async function fetchPricesForResource(resourceType, cities) {
+export async function fetchPricesForResource(resourceType, cities, { bypassCache = false } = {}) {
   const t3Id    = T3_REFINED_IDS[resourceType];
   const itemIds = [
     ...allRawIds(resourceType),
     ...allRefinedIds(resourceType),
     ...(t3Id ? [t3Id] : []),
   ];
-  const flat    = await fetchPrices(itemIds, cities);
+  const flat    = await fetchPrices(itemIds, cities, 1, { bypassCache });
 
   const grouped = {};
   for (const entry of flat) {
     if (!grouped[entry.item_id]) grouped[entry.item_id] = {};
     grouped[entry.item_id][entry.city] = {
-      sell_price_min:      entry.sell_price_min,
-      sell_price_min_date: entry.sell_price_min_date,
+      sell_price_min:       entry.sell_price_min,
+      sell_price_min_date:  entry.sell_price_min_date,
+      sell_price_max:       entry.sell_price_max,
+      sell_price_max_date:  entry.sell_price_max_date,
+      buy_price_min:        entry.buy_price_min,
+      buy_price_min_date:   entry.buy_price_min_date,
+      buy_price_max:        entry.buy_price_max,
+      buy_price_max_date:   entry.buy_price_max_date,
     };
   }
   return grouped;
@@ -148,8 +168,9 @@ export async function fetchPricesForResource(resourceType, cities) {
  * @param {string} dateString  ISO date returned by the API
  * @returns {{ label: string, status: 'fresh' | 'stale' | 'old' }}
  */
-export function getDataAge(dateString) {
-  const diffMs  = Date.now() - new Date(dateString).getTime();
+export function getDataAge(date) {
+  const ts      = date instanceof Date ? date.getTime() : new Date(date).getTime();
+  const diffMs  = Date.now() - ts;
   const diffMin = Math.floor(diffMs  / 60_000);
   const diffH   = Math.floor(diffMin / 60);
   const diffD   = Math.floor(diffH   / 24);
@@ -171,10 +192,10 @@ export function getDataAge(dateString) {
  * @param {number}   days     how many recent days to average (default 7)
  * @returns {Promise<Map<string, Map<string, number>>>}
  */
-export async function fetchHistory(itemIds, cities, quality = 1, days = 7) {
+export async function fetchHistory(itemIds, cities, quality = 1, days = 7, { bypassCache = false } = {}) {
   const key = `hist|${[...itemIds].sort().join(',')}|${[...cities].sort().join(',')}|q${quality}`;
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.timestamp < TTL_MS) return hit.data;
+  if (!bypassCache && hit && Date.now() - hit.timestamp < TTL_MS) return hit.data;
 
   const chunks = [];
   for (let i = 0; i < itemIds.length; i += CHUNK_SIZE) {
